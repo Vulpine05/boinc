@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -24,7 +24,6 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,11 +31,9 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
-
 import edu.berkeley.boinc.R;
 import edu.berkeley.boinc.utils.BOINCUtils;
 import edu.berkeley.boinc.utils.Logging;
@@ -49,12 +46,15 @@ public class ManualUrlInputFragment extends DialogFragment {
         View v = inflater.inflate(R.layout.attach_project_manual_url_input_dialog, container, false);
 
         urlInputET = v.findViewById(R.id.url_input);
+        urlInputET.setOnFocusChangeListener((view, hasFocus) -> {
+            if (hasFocus && urlInputET.getText().length() == 0) {
+                urlInputET.setText("https://");
+            }
+        });
 
         Button continueButton = v.findViewById(R.id.continue_button);
         continueButton.setOnClickListener(view -> {
-            if(Logging.DEBUG) {
-                Log.d(Logging.TAG, "ManualUrlInputFragment: continue clicked");
-            }
+            Logging.logVerbose(Logging.Category.USER_ACTION, "ManualUrlInputFragment: continue clicked");
 
             if(!checkDeviceOnline()) {
                 return;
@@ -95,9 +95,8 @@ public class ManualUrlInputFragment extends DialogFragment {
         if(!online) {
             Toast toast = Toast.makeText(getActivity(), R.string.attachproject_list_no_internet, Toast.LENGTH_SHORT);
             toast.show();
-            if(Logging.DEBUG) {
-                Log.d(Logging.TAG, "ManualUrlInputFragment not online, stop!");
-            }
+            
+            Logging.logDebug(Logging.Category.GUI_ACTIVITY, "ManualUrlInputFragment not online, stop!");
         }
         return online;
     }

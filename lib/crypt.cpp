@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// Copyright (C) 2021 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -215,7 +215,9 @@ int scan_key_hex(FILE* f, KEY* key, int size) {
     len = size - sizeof(key->bits);
     for (i=0; i<len; i++) {
         // coverity[check_return]
-        fscanf(f, "%2x", &n);
+        if (fscanf(f, "%2x", &n) != 1) {
+            return ERR_NULL;
+        }
         key->data[i] = n;
     }
     fs = fscanf(f, ".");
@@ -670,7 +672,10 @@ int check_validity_of_cert(
         }
 #ifdef HAVE_OPAQUE_RSA_DSA_DH
         RSA *rsa;
-        rsa = EVP_PKEY_get0_RSA(pubKey);
+        // CAUTION: In OpenSSL 3.0.0, EVP_PKEY_get0_RSA() now returns a
+        // pointer of type "const struct rsa_st*" to an immutable value.
+        // Do not try to modify the contents of the returned struct.
+        rsa = (rsa_st*)EVP_PKEY_get0_RSA(pubKey);
         if (!RSA_blinding_on(rsa, c)) {
 #else
         if (!RSA_blinding_on(pubKey->pkey.rsa, c)) {

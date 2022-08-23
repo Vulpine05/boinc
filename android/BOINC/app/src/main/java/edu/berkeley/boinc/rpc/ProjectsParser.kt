@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,7 +18,6 @@
  */
 package edu.berkeley.boinc.rpc
 
-import android.util.Log
 import android.util.Xml
 import edu.berkeley.boinc.utils.Logging
 import org.xml.sax.Attributes
@@ -166,12 +165,12 @@ class ProjectsParser : BaseParser() {
                     mProject.noCUDAPref = mCurrentElement.toString() != "0"
                 } else if (localName.equals(Project.Fields.NO_ATI_PREF, ignoreCase = true)) {
                     mProject.noATIPref = mCurrentElement.toString() != "0"
+                } else if (localName.equals(Project.Fields.DISK_USAGE, ignoreCase = true)) {
+                    mProject.diskUsage = mCurrentElement.toDouble()
                 }
             }
-        } catch (e: NumberFormatException) {
-            if (Logging.ERROR) {
-                Log.e(Logging.TAG, "ProjectsParser.endElement error: ", e)
-            }
+        } catch (e: Exception) {
+            Logging.logException(Logging.Category.XML, "ProjectsParser.endElement error: ", e)
         }
         mElementStarted = false
     }
@@ -192,6 +191,9 @@ class ProjectsParser : BaseParser() {
                 Xml.parse(rpcResult, parser)
                 parser.projects
             } catch (e: SAXException) {
+                Logging.logException(Logging.Category.RPC, "ProjectsParser: malformed XML ", e)
+                Logging.logDebug(Logging.Category.XML, "ProjectsParser: $rpcResult")
+
                 emptyList()
             }
         }

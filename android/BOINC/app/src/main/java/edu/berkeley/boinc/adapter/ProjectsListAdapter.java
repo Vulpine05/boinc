@@ -22,7 +22,6 @@ import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.text.format.DateUtils;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,24 +30,22 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
-
-import org.apache.commons.lang3.StringUtils;
-
-import java.text.NumberFormat;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-
 import edu.berkeley.boinc.BOINCActivity;
 import edu.berkeley.boinc.ProjectsFragment.ProjectsListData;
 import edu.berkeley.boinc.R;
 import edu.berkeley.boinc.rpc.Notice;
 import edu.berkeley.boinc.rpc.Transfer;
+import edu.berkeley.boinc.rpc.TransferStatus;
 import edu.berkeley.boinc.utils.Logging;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import org.apache.commons.lang3.StringUtils;
 
 public class ProjectsListAdapter extends ArrayAdapter<ProjectsListData> {
     private List<ProjectsListData> entries;
@@ -77,6 +74,12 @@ public class ProjectsListAdapter extends ArrayAdapter<ProjectsListData> {
         return position;
     }
 
+    public String getDiskUsage(int position) {
+        double diskUsage = entries.get(position).getProject().getDiskUsage();
+        DecimalFormat df = new DecimalFormat("#.##");
+        return df.format(diskUsage/(1024*1024));
+    }
+
     public String getName(int position) {
         return entries.get(position).getProject().getProjectName();
     }
@@ -98,9 +101,8 @@ public class ProjectsListAdapter extends ArrayAdapter<ProjectsListData> {
             return BOINCActivity.monitor.getProjectIcon(entries.get(position).id);
         }
         catch(Exception e) {
-            if(Logging.WARNING) {
-                Log.w(Logging.TAG, "ProjectsListAdapter: Could not load data, clientStatus not initialized.");
-            }
+            Logging.logException(Logging.Category.MONITOR, "ProjectsListAdapter: Could not load data, clientStatus not initialized.", e);
+
             return null;
         }
     }
@@ -173,9 +175,7 @@ public class ProjectsListAdapter extends ArrayAdapter<ProjectsListData> {
                 statusText = BOINCActivity.monitor.getProjectStatus(data.getProject().getMasterURL());
             }
             catch(Exception e) {
-                if(Logging.ERROR) {
-                    Log.e(Logging.TAG, "ProjectsListAdapter.getView error: ", e);
-                }
+                Logging.logException(Logging.Category.GUI_VIEW, "ProjectsListAdapter.getView error: ", e);
             }
             TextView tvStatus = vi.findViewById(R.id.project_status);
             if(statusText.isEmpty()) {
@@ -215,6 +215,7 @@ public class ProjectsListAdapter extends ArrayAdapter<ProjectsListData> {
                 boolean downloadsPresent = false;
                 boolean transfersActive = false; // true if at least one transfer is active
                 long nextRetryS = 0;
+                int transferStatus = 0;
                 for(Transfer trans : data.getProjectTransfers()) {
                     if(trans.isUpload()) {
                         numberTransfersUpload++;
@@ -229,6 +230,7 @@ public class ProjectsListAdapter extends ArrayAdapter<ProjectsListData> {
                     }
                     else if(trans.getNextRequestTime() < nextRetryS || nextRetryS == 0) {
                         nextRetryS = trans.getNextRequestTime();
+                        transferStatus = trans.getStatus();
                     }
                 }
 
@@ -248,22 +250,30 @@ public class ProjectsListAdapter extends ArrayAdapter<ProjectsListData> {
 
                 String activityStatus = ""; // will never be empty
                 String activityExplanation = "";
-                if(!transfersActive) { // no transfers active, give reason
-                    activityStatus += activity.getResources().getString(R.string.trans_pending);
 
-                    if(nextRetryS > 0) { // next try at defined time
-                        long retryInSeconds = Duration.between(Instant.ofEpochSecond(nextRetryS),
-                                                               Instant.now()).getSeconds();
-                        // if timestamp is in the past, do not write anything
-                        if(retryInSeconds >= 0) {
-                            final String formattedTime = DateUtils.formatElapsedTime(retryInSeconds);
-                            activityExplanation += activity.getResources().getString(R.string.trans_retry_in,
-                                                                                     formattedTime);
+                if (nextRetryS > Instant.now().getEpochSecond()) {
+                    activityStatus += activity.getResources().getString(R.string.trans_pending);
+                    long retryInSeconds = Duration.between(Instant.now(),
+                                                           Instant.ofEpochSecond(nextRetryS)).getSeconds();
+                    // if timestamp is in the past, do not write anything
+                    if(retryInSeconds >= 0) {
+                        final String formattedTime = DateUtils.formatElapsedTime(retryInSeconds);
+                        activityExplanation += activity.getResources().getString(R.string.trans_retry_in,
+                                                                                 formattedTime);
+                    }
+                } else if(TransferStatus.ERR_GIVEUP_DOWNLOAD.getStatus() == transferStatus || TransferStatus.ERR_GIVEUP_UPLOAD.getStatus() == transferStatus) {
+                    activityStatus += activity.getResources().getString(R.string.trans_failed);
+                } else {
+                    if(BOINCActivity.monitor.getNetworkSuspendReason() != 0) {
+                        activityStatus += activity.getResources().getString(R.string.trans_suspended);
+                    } else {
+                        if (transfersActive) {
+                            activityStatus += activity.getResources().getString(R.string.trans_active);
+                        }
+                        else {
+                            activityStatus += activity.getResources().getString(R.string.trans_pending);
                         }
                     }
-                }
-                else { // transfers active
-                    activityStatus += activity.getResources().getString(R.string.trans_active);
                 }
 
                 transfersString +=
@@ -283,6 +293,10 @@ public class ProjectsListAdapter extends ArrayAdapter<ProjectsListData> {
             ((TextView) vi.findViewById(R.id.project_credits)).setText(hostCredit == userCredit ?
                                                                        NumberFormat.getIntegerInstance().format(hostCredit) :
                                                                        this.activity.getString(R.string.projects_credits_host_and_user, hostCredit, userCredit));
+
+            TextView tvDiskUsage = vi.findViewById(R.id.project_disk_usage);
+            String diskUsage = getDiskUsage(position);
+            tvDiskUsage.setText(this.activity.getString(R.string.projects_disk_usage_with_unit, diskUsage));
 
             // server notice
             Notice notice = data.getLastServerNotice();

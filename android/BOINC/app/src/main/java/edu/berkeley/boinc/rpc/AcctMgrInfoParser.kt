@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,7 +18,6 @@
  */
 package edu.berkeley.boinc.rpc
 
-import android.util.Log
 import android.util.Xml
 import edu.berkeley.boinc.utils.Logging
 import org.xml.sax.Attributes
@@ -63,9 +62,7 @@ class AcctMgrInfoParser : BaseParser() {
                 }
             }
         } catch (e: Exception) {
-            if (Logging.ERROR) {
-                Log.e(Logging.TAG, "AcctMgrInfoParser.endElement error: ", e)
-            }
+            Logging.logException(Logging.Category.XML, "AcctMgrInfoParser.endElement error: ", e)
         }
         mElementStarted = false
     }
@@ -79,9 +76,9 @@ class AcctMgrInfoParser : BaseParser() {
                 Xml.parse(rpcResult, parser)
                 parser.accountMgrInfo
             } catch (e: SAXException) {
-                if (Logging.WARNING) {
-                    Log.w(Logging.TAG, "AcctMgrRPCReplyParser: malformatted XML")
-                }
+                Logging.logException(Logging.Category.RPC, "AcctMgrInfoParser: malformed XML ", e)
+                Logging.logDebug(Logging.Category.XML, "AcctMgrInfoParser: $rpcResult")
+
                 null
             }
         }

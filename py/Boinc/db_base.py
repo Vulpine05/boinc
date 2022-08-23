@@ -69,13 +69,13 @@ def _commit_object(tablename, paramdict, id=None):
     equalcommands = []
     for key in paramdict.keys():
         value = paramdict[key]
-        if value == None:
+        if value is None:
             continue
         elif isinstance(value, int):
             equalcommands.append('%s=%d' %(key,value))
         else:
             equalcommands.append("%s='%s'"%(key,dbconnection.escape_string(str(value))))
-    if id == None:
+    if id is None:
         command = 'INSERT INTO %s SET %s' % \
             (tablename, ', '.join(equalcommands))
         if debug.mysql:
@@ -97,7 +97,7 @@ def _remove_object(command, id=None):
         id is given, it assembles the SQL command and deletes the object
         from the database.  Does nothing if no id is given."""
     assert(dbconnection)
-    if id == None:
+    if id is None:
         pass
     else:
         cursor = dbconnection.cursor()
@@ -122,7 +122,7 @@ def _select_object(table, searchdict, extra_args="", extra_params=[], select_wha
     if join:
         command += "," + join
     for (key,value) in searchdict.items():
-        if value == None:
+        if value is None:
             value = ''
         escaped_value = dbconnection.escape_string(str(value))
         if key == 'text':
@@ -318,7 +318,7 @@ class DatabaseTable:
         return
 
     def _create_objects_from_sql_results(self, results, kwargs):
-        return [ self._create_object_from_sql_result for result in  results ]
+        return [ self._create_object_from_sql_result(result) for result in results ]
 
     def _create_object_from_sql_result(self, result):
         id = result['id']

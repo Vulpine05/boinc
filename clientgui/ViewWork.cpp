@@ -267,7 +267,7 @@ CViewWork::CViewWork(wxNotebook* pNotebook) :
     m_aStdColNameOrder->Insert(_("Name"), COLUMN_NAME);
     
     // m_iStdColWidthOrder is an array of the width for each column.
-    // Entries must be in order of ascending Column ID.  We initalize
+    // Entries must be in order of ascending Column ID.  We initialize
     // it here to the default column widths.  It is updated by
     // CBOINCListCtrl::OnRestoreState() and also when a user resizes
     // a column by dragging the divider between two columns.
@@ -616,7 +616,7 @@ void CViewWork::OnShowItemProperties( wxCommandEvent& WXUNUSED(event) ) {
 
 bool CViewWork::OnSaveState(wxConfigBase* pConfig) {
     bool bReturnValue = true;
-    CMainDocument* pDoc     = wxGetApp().GetDocument();
+    CMainDocument* pDoc = wxGetApp().GetDocument();
 
     wxASSERT(pDoc);
     wxASSERT(wxDynamicCast(pDoc, CMainDocument));
@@ -624,17 +624,24 @@ bool CViewWork::OnSaveState(wxConfigBase* pConfig) {
     wxASSERT(m_pTaskPane);
     wxASSERT(m_pListPane);
 
-    if (!m_pTaskPane->OnSaveState(pConfig)) {
+    if (!pConfig) {
+        return false;
+    }
+
+    if (!m_pTaskPane || !m_pTaskPane->OnSaveState(pConfig)) {
         bReturnValue = false;
     }
-    if (!m_pListPane->OnSaveState(pConfig)) {
+    if (!m_pListPane || !m_pListPane->OnSaveState(pConfig)) {
         bReturnValue = false;
     }
 
-    wxString    strBaseConfigLocation = wxEmptyString;
-    strBaseConfigLocation = wxT("/Tasks");
-    pConfig->SetPath(strBaseConfigLocation);
-    pConfig->Write(wxT("ActiveTasksOnly"), (pDoc->m_ActiveTasksOnly ? 1 : 0));
+    if (pConfig && pDoc) {
+        const wxString strBaseConfigLocation = wxT("/Tasks");
+        pConfig->SetPath(strBaseConfigLocation);
+        pConfig->Write(wxT("ActiveTasksOnly"), (pDoc->m_ActiveTasksOnly ? 1 : 0));
+    } else {
+        bReturnValue = false;
+    }
 
     return bReturnValue;
 }

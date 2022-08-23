@@ -17,7 +17,7 @@
 Project Website: https://boinc.berkeley.edu
 
 ## Want to create a project
-See: https://boinc.berkeley.edu/trac/wiki
+See: https://boinc.berkeley.edu/trac/wiki/ProjectMain
 
 ## Want to help
 Read about all the [ways you can help](CONTRIBUTING.md)
@@ -31,10 +31,8 @@ contributions to The Regents of the University of California, who may then
 use the code for any purpose that it desires.
 
 ## Reporting Security Issues
-We strongly encourage you to report security problems to our private mailing
-list and not by posting an issue.  You can do this by sending an email to
-boinc_pmc@googlegroups.com.  This will be privately sent to the members of the
-BOINC Project Management Committee.
+Please report security issues by emailing
+[David Anderson](https://boinc.berkeley.edu/anderson/).
 
 # License
 BOINC is free software; you can redistribute it and/or modify it

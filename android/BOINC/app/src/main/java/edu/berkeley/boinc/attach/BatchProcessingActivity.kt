@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -25,15 +25,17 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentStatePagerAdapter
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.viewpager.widget.ViewPager.OnPageChangeListener
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import edu.berkeley.boinc.BOINCActivity
 import edu.berkeley.boinc.R
+import edu.berkeley.boinc.attach.HintFragment.*
 import edu.berkeley.boinc.attach.ProjectAttachService.Companion.RESULT_READY
 import edu.berkeley.boinc.attach.ProjectAttachService.Companion.RESULT_SUCCESS
 import edu.berkeley.boinc.attach.ProjectAttachService.LocalBinder
@@ -50,30 +52,20 @@ class BatchProcessingActivity : AppCompatActivity() {
     private var attachService: ProjectAttachService? = null
     private var asIsBound = false
 
-    private val hints: MutableList<HintFragment> = ArrayList() // hint fragments
-
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "BatchProcessingActivity onCreate")
-        }
+
+        Logging.logVerbose(Logging.Category.GUI_ACTIVITY, "BatchProcessingActivity onCreate")
 
         // setup layout
         binding = AttachProjectBatchProcessingLayoutBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // create hint fragments
-        hints.add(HintFragment.newInstance(HintFragment.HINT_TYPE_CONTRIBUTION))
-        hints.add(HintFragment.newInstance(HintFragment.HINT_TYPE_PROJECTWEBSITE))
-        hints.add(HintFragment.newInstance(HintFragment.HINT_TYPE_PLATFORMS))
-
         // Instantiate a PagerAdapter.
         // provides content to pager
-        val mPagerAdapter = HintPagerAdapter(supportFragmentManager)
+        val mPagerAdapter = HintPagerAdapter(supportFragmentManager, lifecycle)
         binding.hintContainer.adapter = mPagerAdapter
-        binding.hintContainer.addOnPageChangeListener(object : OnPageChangeListener {
-            override fun onPageScrollStateChanged(arg0: Int) {}
-            override fun onPageScrolled(arg0: Int, arg1: Float, arg2: Int) {}
+        binding.hintContainer.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(arg0: Int) {
                 adaptHintHeader()
             }
@@ -83,9 +75,8 @@ class BatchProcessingActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        if (Logging.VERBOSE) {
-            Log.v(Logging.TAG, "BatchProcessingActivity onDestroy")
-        }
+        Logging.logVerbose(Logging.Category.GUI_ACTIVITY, "BatchProcessingActivity onDestroy")
+
         super.onDestroy()
         doUnbindService()
     }
@@ -104,14 +95,13 @@ class BatchProcessingActivity : AppCompatActivity() {
     // triggered by continue button
     fun continueClicked(@Suppress("UNUSED_PARAMETER") v: View) {
         val conflicts = attachService!!.anyUnresolvedConflicts()
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "BatchProcessingActivity.continueClicked: conflicts? $conflicts")
-        }
+
+        Logging.logDebug(Logging.Category.USER_ACTION, "BatchProcessingActivity.continueClicked: conflicts? $conflicts")
+
         if (conflicts) {
             // conflicts occurred, bring up resolution screen
-            if (Logging.DEBUG) {
-                Log.d(Logging.TAG, "attachProject(): conflicts exists, open resolution activity...")
-            }
+            Logging.logDebug(Logging.Category.GUI_ACTIVITY, "attachProject(): conflicts exists, open resolution activity...")
+
             startActivity(Intent(this@BatchProcessingActivity,
                     BatchConflictListActivity::class.java).apply {
                 putExtra("conflicts", true)
@@ -129,12 +119,11 @@ class BatchProcessingActivity : AppCompatActivity() {
 
     // triggered by share button
     fun shareClicked(@Suppress("UNUSED_PARAMETER") v: View) {
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "BatchProcessingActivity.shareClicked.")
-        }
+        Logging.logVerbose(Logging.Category.USER_ACTION, "BatchProcessingActivity.shareClicked.")
+
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            
+
             val flag = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
                 @Suppress("DEPRECATION")
                 Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
@@ -159,9 +148,9 @@ class BatchProcessingActivity : AppCompatActivity() {
     // adapts header text and icons when hint selection changes
     private fun adaptHintHeader() {
         val position = binding.hintContainer.currentItem
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "BatchProcessingActivity.adaptHintHeader position: $position")
-        }
+
+        Logging.logVerbose(Logging.Category.GUI_VIEW, "BatchProcessingActivity.adaptHintHeader position: $position")
+
         val hintText = getString(R.string.attachproject_hints_header) + " ${position + 1}/$NUM_HINTS"
         binding.hintHeaderText.text = hintText
         var leftVisibility = View.VISIBLE
@@ -179,17 +168,15 @@ class BatchProcessingActivity : AppCompatActivity() {
 
     // previous image in hint header clicked
     fun previousHintClicked(@Suppress("UNUSED_PARAMETER") view: View) {
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "BatchProcessingActivity.previousHintClicked.")
-        }
+        Logging.logVerbose(Logging.Category.USER_ACTION, "BatchProcessingActivity.previousHintClicked.")
+
         binding.hintContainer.currentItem--
     }
 
     // previous image in hint header clicked
     fun nextHintClicked(@Suppress("UNUSED_PARAMETER") view: View) {
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "BatchProcessingActivity.nextHintClicked.")
-        }
+        Logging.logVerbose(Logging.Category.USER_ACTION, "BatchProcessingActivity.nextHintClicked.")
+
         binding.hintContainer.currentItem++
     }
 
@@ -228,43 +215,39 @@ class BatchProcessingActivity : AppCompatActivity() {
     }
 
     private suspend fun attachProject() {
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "attachProject(): ${attachService!!.numberOfSelectedProjects}" +
-                    " projects to attach....")
-        }
+        Logging.logDebug(Logging.Category.PROJECTS, "attachProject(): ${attachService!!.numberOfSelectedProjects}" +
+                " projects to attach....")
+
         // shown while project configs are loaded
         binding.attachStatusText.text = getString(R.string.attachproject_login_loading)
 
         withContext(Dispatchers.Default) {
             // wait until service is ready
             while (!attachService!!.projectConfigRetrievalFinished) {
-                if (Logging.DEBUG) {
-                    Log.d(Logging.TAG, "attachProject(): project config retrieval has" +
-                            " not finished yet, wait...")
-                }
+                Logging.logDebug(Logging.Category.PROJECTS, "attachProject(): project config retrieval has" +
+                        " not finished yet, wait...")
+
                 delay(1000)
             }
-            if (Logging.DEBUG) {
-                Log.d(Logging.TAG, "attachProject(): project config retrieval finished," +
-                        " continue with attach.")
-            }
+
+            Logging.logDebug(Logging.Category.PROJECTS, "attachProject(): project config retrieval finished," +
+                    " continue with attach.")
+
             // attach projects, one at a time
             attachService!!.selectedProjects
                     // skip already tried projects in batch processing
                     .filter { it.result == RESULT_READY }
                     .onEach {
-                        if (Logging.DEBUG) {
-                            Log.d(Logging.TAG, "attachProject(): trying: ${it.info?.name}")
-                        }
+                        Logging.logDebug(Logging.Category.PROJECTS, "attachProject(): trying: ${it.info?.name}")
+
                         binding.attachStatusText.text = getString(R.string.attachproject_working_attaching,
                                 it.info?.name)
                     }
                     .map { it.lookupAndAttach(false) }
-                    .filter { it != RESULT_SUCCESS && Logging.ERROR }
-                    .forEach { Log.e(Logging.TAG, "attachProject() attach returned conflict: $it") }
-            if (Logging.DEBUG) {
-                Log.d(Logging.TAG, "attachProject(): finished.")
-            }
+                    .filter { it != RESULT_SUCCESS }
+                    .forEach { Logging.logError(Logging.Category.PROJECTS, "attachProject() attach returned conflict: $it") }
+
+            Logging.logDebug(Logging.Category.PROJECTS, "attachProject(): finished.")
         }
 
         binding.attachStatusOngoingWrapper.visibility = View.GONE
@@ -272,11 +255,16 @@ class BatchProcessingActivity : AppCompatActivity() {
         binding.shareButton.visibility = View.VISIBLE
     }
 
-    private inner class HintPagerAdapter internal constructor(fm: FragmentManager)
-        : FragmentStatePagerAdapter(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
-        override fun getItem(position: Int) = hints[position]
-
-        override fun getCount() = NUM_HINTS
+    private inner class HintPagerAdapter constructor(fm: FragmentManager, lc: Lifecycle)
+        : FragmentStateAdapter(fm, lc) {
+        override fun createFragment(position: Int): Fragment {
+            return when (position) {
+                0 -> newInstance(HINT_TYPE_CONTRIBUTION)
+                1 -> newInstance(HINT_TYPE_PROJECTWEBSITE)
+                else -> newInstance(HINT_TYPE_PLATFORMS)
+            }
+        }
+        override fun getItemCount(): Int = NUM_HINTS
     }
 
     companion object {

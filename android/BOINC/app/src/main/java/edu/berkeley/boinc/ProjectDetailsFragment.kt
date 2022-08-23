@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -25,11 +25,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Point
+import android.os.Build
 import android.os.Bundle
 import android.os.RemoteException
 import android.text.SpannableString
 import android.text.style.UnderlineSpan
-import android.util.Log
 import android.view.*
 import android.widget.Button
 import android.widget.TextView
@@ -44,11 +44,11 @@ import edu.berkeley.boinc.rpc.Project
 import edu.berkeley.boinc.rpc.ProjectInfo
 import edu.berkeley.boinc.rpc.RpcClient
 import edu.berkeley.boinc.utils.Logging
-import kotlinx.coroutines.*
 import java.util.*
+import kotlinx.coroutines.*
 
 class ProjectDetailsFragment : Fragment() {
-    private var url: String? = null
+    private var url: String = ""
 
     // might be null for projects added via manual URL attach
     private var projectInfo: ProjectInfo? = null
@@ -68,21 +68,19 @@ class ProjectDetailsFragment : Fragment() {
         get() {
             try {
                 project = BOINCActivity.monitor!!.projects.firstOrNull { it.masterURL == url }
-                projectInfo = BOINCActivity.monitor!!.getProjectInfo(url)
+                projectInfo = BOINCActivity.monitor!!.getProjectInfoAsync(url).await()
             } catch (e: Exception) {
-                if (Logging.ERROR) {
-                    Log.e(Logging.TAG, "ProjectDetailsFragment getCurrentProjectData could not" +
-                            " retrieve project list")
-                }
+                Logging.logError(Logging.Category.GUI_VIEW, "ProjectDetailsFragment getCurrentProjectData could not" +
+                        " retrieve project list")
             }
-            if (project == null && Logging.WARNING) {
-                Log.w(Logging.TAG,
+            if (project == null) {
+                Logging.logWarning(Logging.Category.GUI_VIEW,
                         "ProjectDetailsFragment getCurrentProjectData could not find project for URL: $url")
             }
-            if (projectInfo == null && Logging.WARNING) {
-                Log.d(Logging.TAG,
+            if (projectInfo == null) {
+                Logging.logDebug(Logging.Category.GUI_VIEW,
                         "ProjectDetailsFragment getCurrentProjectData could not find project" +
-                                " attach list for URL: $url")
+                        " attach list for URL: $url")
             }
         }
 
@@ -103,16 +101,15 @@ class ProjectDetailsFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // get data
-        url = requireArguments().getString("url")
+        url = requireArguments().getString("url") ?: ""
         currentProjectData
         setHasOptionsMenu(true) // enables fragment specific menu
         super.onCreate(savedInstanceState)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        if (Logging.VERBOSE) {
-            Log.v(Logging.TAG, "ProjectDetailsFragment onCreateView")
-        }
+        Logging.logVerbose(Logging.Category.GUI_VIEW, "ProjectDetailsFragment onCreateView")
+
         // Inflate the layout for this fragment
         _binding = ProjectDetailsLayoutBinding.inflate(inflater, container, false)
         return binding.root
@@ -126,7 +123,14 @@ class ProjectDetailsFragment : Fragment() {
     override fun onAttach(context: Context) {
         if (context is Activity) {
             val size = Point()
-            context.windowManager.defaultDisplay.getSize(size)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                @Suppress("DEPRECATION")
+                context.windowManager.defaultDisplay.getSize(size)
+            } else {
+                val r = context.windowManager.currentWindowMetrics.bounds
+                size.x = r.width()
+                size.y = r.height()
+            }
             width = size.x
             height = size.y
         }
@@ -194,8 +198,8 @@ class ProjectDetailsFragment : Fragment() {
                 }
                 R.id.projects_control_reset -> showConfirmationDialog(RpcClient.PROJECT_RESET)
                 R.id.projects_control_remove -> showConfirmationDialog(RpcClient.PROJECT_DETACH)
-                else -> if (Logging.WARNING) {
-                    Log.w(Logging.TAG, "ProjectDetailsFragment onOptionsItemSelected: could not match ID")
+                else -> {
+                    Logging.logError(Logging.Category.USER_ACTION, "ProjectDetailsFragment onOptionsItemSelected: could not match ID")
                 }
             }
         }
@@ -216,13 +220,14 @@ class ProjectDetailsFragment : Fragment() {
             val removeStr = getString(R.string.projects_confirm_detach_confirm)
             tvTitle.text = getString(R.string.projects_confirm_title, removeStr)
             tvMessage.text = getString(R.string.projects_confirm_message,
-                    removeStr.toLowerCase(Locale.ROOT), project!!.projectName + " "
+                removeStr.lowercase(Locale.ROOT), project!!.projectName + " "
                             + getString(R.string.projects_confirm_detach_message))
             confirm.text = removeStr
         } else if (operation == RpcClient.PROJECT_RESET) {
             val resetStr = getString(R.string.projects_confirm_reset_confirm)
             tvTitle.text = getString(R.string.projects_confirm_title, resetStr)
-            tvMessage.text = getString(R.string.projects_confirm_message, resetStr.toLowerCase(Locale.ROOT),
+            tvMessage.text = getString(R.string.projects_confirm_message,
+                resetStr.lowercase(Locale.ROOT),
                     project!!.projectName)
             confirm.text = resetStr
         }
@@ -299,25 +304,20 @@ class ProjectDetailsFragment : Fragment() {
                 binding.statusWrapper.visibility = View.GONE
             }
         } catch (e: Exception) {
-            if (Logging.ERROR) {
-                Log.e(Logging.TAG, "ProjectDetailsFragment.updateChangingItems error: ", e)
-            }
+            Logging.logException(Logging.Category.GUI_VIEW, "ProjectDetailsFragment.updateChangingItems error: ", e)
         }
     }
 
     // executes project operations in new thread
     private suspend fun performProjectOperation(operation: Int) = coroutineScope {
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "performProjectOperation()")
-        }
+        Logging.logVerbose(Logging.Category.USER_ACTION, "performProjectOperation()")
 
         val success = async {
             return@async try {
                 BOINCActivity.monitor!!.projectOp(operation, project!!.masterURL)
             } catch (e: Exception) {
-                if (Logging.WARNING) {
-                    Log.w(Logging.TAG, "performProjectOperation() error: ", e)
-                }
+                Logging.logException(Logging.Category.USER_ACTION, "performProjectOperation() error: ", e)
+
                 false
             }
         }.await()
@@ -326,38 +326,32 @@ class ProjectDetailsFragment : Fragment() {
             try {
                 BOINCActivity.monitor!!.forceRefresh()
             } catch (e: RemoteException) {
-                if (Logging.ERROR) {
-                    Log.e(Logging.TAG, "performProjectOperation() error: ", e)
-                }
+                Logging.logException(Logging.Category.USER_ACTION, "performProjectOperation() error: ", e)
             }
-        } else if (Logging.WARNING) {
-            Log.w(Logging.TAG, "performProjectOperation() failed.")
+        } else {
+            Logging.logError(Logging.Category.USER_ACTION, "performProjectOperation() failed.")
         }
     }
 
     private suspend fun updateSlideshowImages() = coroutineScope {
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG,
-                    "UpdateSlideshowImagesAsync updating images in new thread. project:" +
-                            " $project!!.masterURL")
-        }
+        Logging.logDebug(Logging.Category.GUI_VIEW,
+                "UpdateSlideshowImagesAsync updating images in new thread. project:" +
+                " $project!!.masterURL")
+
         val success = withContext(Dispatchers.Default) {
             slideshowImages = try {
                 BOINCActivity.monitor!!.getSlideshowForProject(project!!.masterURL)
             } catch (e: Exception) {
-                if (Logging.WARNING) {
-                    Log.w(Logging.TAG, "updateSlideshowImages: Could not load data, " +
-                            "clientStatus not initialized.")
-                }
+                Logging.logError(Logging.Category.GUI_VIEW, "updateSlideshowImages: Could not load data, " +
+                        "clientStatus not initialized.")
+
                 return@withContext false
             }
             return@withContext slideshowImages.isNotEmpty()
         }
 
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG,
-                    "UpdateSlideshowImagesAsync success: $success, images: ${slideshowImages.size}")
-        }
+        Logging.logDebug(Logging.Category.GUI_VIEW,
+                "UpdateSlideshowImagesAsync success: $success, images: ${slideshowImages.size}")
         if (success && slideshowImages.isNotEmpty()) {
             binding.slideshowLoading.visibility = View.GONE
             for (image in slideshowImages) {

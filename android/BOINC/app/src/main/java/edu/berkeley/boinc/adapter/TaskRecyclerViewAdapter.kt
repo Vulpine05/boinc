@@ -20,7 +20,6 @@ package edu.berkeley.boinc.adapter
 
 import android.graphics.Bitmap
 import android.text.format.DateUtils
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,7 +31,26 @@ import edu.berkeley.boinc.TasksFragment
 import edu.berkeley.boinc.TasksFragment.TaskData
 import edu.berkeley.boinc.databinding.TasksLayoutListItemBinding
 import edu.berkeley.boinc.rpc.RpcClient
-import edu.berkeley.boinc.utils.*
+import edu.berkeley.boinc.utils.Logging
+import edu.berkeley.boinc.utils.PROCESS_ABORTED
+import edu.berkeley.boinc.utils.PROCESS_ABORT_PENDING
+import edu.berkeley.boinc.utils.PROCESS_EXECUTING
+import edu.berkeley.boinc.utils.PROCESS_QUIT_PENDING
+import edu.berkeley.boinc.utils.PROCESS_SUSPENDED
+import edu.berkeley.boinc.utils.PROCESS_UNINITIALIZED
+import edu.berkeley.boinc.utils.RESULT_ABORTED
+import edu.berkeley.boinc.utils.RESULT_COMPUTE_ERROR
+import edu.berkeley.boinc.utils.RESULT_FILES_DOWNLOADED
+import edu.berkeley.boinc.utils.RESULT_FILES_DOWNLOADING
+import edu.berkeley.boinc.utils.RESULT_FILES_UPLOADED
+import edu.berkeley.boinc.utils.RESULT_FILES_UPLOADING
+import edu.berkeley.boinc.utils.RESULT_NEW
+import edu.berkeley.boinc.utils.RESULT_PROJECT_SUSPENDED
+import edu.berkeley.boinc.utils.RESULT_READY_TO_REPORT
+import edu.berkeley.boinc.utils.RESULT_SUSPENDED_VIA_GUI
+import edu.berkeley.boinc.utils.RESULT_UPLOAD_FAILED
+import edu.berkeley.boinc.utils.getColorCompat
+import edu.berkeley.boinc.utils.secondsToLocalDateTime
 import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -187,9 +205,8 @@ class TaskRecyclerViewAdapter(
         return try {
             BOINCActivity.monitor!!.getProjectIcon(taskList[position].result.projectURL)
         } catch (e: Exception) {
-            if (Logging.WARNING) {
-                Log.w(Logging.TAG, "TasksListAdapter: Could not load data, clientStatus not initialized.")
-            }
+            Logging.logException(Logging.Category.MONITOR, "TasksListAdapter: Could not load data, clientStatus not initialized.", e)
+
             null
         }
     }
@@ -218,9 +235,9 @@ class TaskRecyclerViewAdapter(
                 PROCESS_QUIT_PENDING -> fragment.getString(R.string.tasks_active_quit_pending)
                 PROCESS_SUSPENDED -> fragment.getString(R.string.tasks_active_suspended)
                 else -> {
-                    if (Logging.WARNING) {
-                        Log.w(Logging.TAG, "determineStatusText could not map: " + tmp.determineState())
-                    }
+                    Logging.logError(Logging.Category.TASKS,"determineStatusText could not map: $status"
+                    )
+
                     ""
                 }
             }
@@ -236,9 +253,9 @@ class TaskRecyclerViewAdapter(
                 RESULT_ABORTED -> fragment.getString(R.string.tasks_result_aborted)
                 RESULT_UPLOAD_FAILED -> fragment.getString(R.string.tasks_result_upload_failed)
                 else -> {
-                    if (Logging.WARNING) {
-                        Log.w(Logging.TAG, "determineStatusText could not map: " + tmp.determineState())
-                    }
+                    Logging.logError(Logging.Category.TASKS,"determineStatusText could not map: $status"
+                    )
+
                     ""
                 }
             }

@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,7 +18,6 @@
  */
 package edu.berkeley.boinc.rpc
 
-import android.util.Log
 import android.util.Xml
 import edu.berkeley.boinc.utils.Logging
 import org.xml.sax.Attributes
@@ -32,12 +31,13 @@ class AccountOutParser : BaseParser() {
     override fun startElement(uri: String?, localName: String, qName: String?, attributes: Attributes?) {
         super.startElement(uri, localName, qName, attributes)
         if (localName.equalsAny(ERROR_NUM, AccountOut.Fields.ERROR_MSG,
-                        AccountOut.Fields.AUTHENTICATOR, ignoreCase = true)) {
-            accountOut = AccountOut()
-        } else {
-            mElementStarted = true
-            mCurrentElement.setLength(0)
+                                AccountOut.Fields.AUTHENTICATOR, ignoreCase = true)) {
+            if (!this::accountOut.isInitialized) {
+                accountOut = AccountOut()
+            }
         }
+        mElementStarted = true
+        mCurrentElement.setLength(0)
     }
 
     @Throws(SAXException::class)
@@ -57,9 +57,7 @@ class AccountOutParser : BaseParser() {
                 }
             }
         } catch (e: NumberFormatException) {
-            if (Logging.ERROR) {
-                Log.e(Logging.TAG, "AccountOutParser.endElement error: ", e)
-            }
+            Logging.logException(Logging.Category.XML, "AccountOutParser.endElement error: ", e)
         }
         mElementStarted = false
     }
@@ -81,6 +79,9 @@ class AccountOutParser : BaseParser() {
                 Xml.parse(outResult, parser)
                 parser.accountOut
             } catch (e: SAXException) {
+                Logging.logException(Logging.Category.RPC, "AccountOutParser: malformed XML ", e)
+                Logging.logDebug(Logging.Category.XML, "AccountOutParser: $rpcResult")
+                
                 null
             }
         }

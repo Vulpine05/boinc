@@ -25,7 +25,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.os.*
-import android.util.Log
 import androidx.core.content.getSystemService
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -34,18 +33,19 @@ import edu.berkeley.boinc.BuildConfig
 import edu.berkeley.boinc.R
 import edu.berkeley.boinc.mutex.BoincMutex
 import edu.berkeley.boinc.rpc.*
-import edu.berkeley.boinc.rpc.Message
 import edu.berkeley.boinc.utils.*
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import okio.buffer
-import okio.source
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.util.*
 import javax.inject.Inject
 import kotlin.properties.Delegates
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import okio.buffer
+import okio.source
+
+typealias Message = edu.berkeley.boinc.rpc.Message
 
 /**
  * Main Service of BOINC on Android
@@ -110,6 +110,8 @@ class Monitor : LifecycleService() {
     private var screenOn = false
     private val forceReinstall = false // for debugging purposes //TODO
 
+    private var isRemote = false
+
     /**
      * Determines BOINC platform name corresponding to device's cpu architecture (ARM, x86).
      * Defaults to ARM
@@ -120,20 +122,22 @@ class Monitor : LifecycleService() {
         get() {
             val platformId: Int
             val arch = System.getProperty("os.arch") ?: ""
-            val normalizedArch = arch.toUpperCase(Locale.US)
+            val normalizedArch = arch.uppercase(Locale.US)
             platformId = when {
                 normalizedArch.containsAny("ARM64", "AARCH64") -> R.string.boinc_platform_name_arm64
                 "X86_64" in normalizedArch -> R.string.boinc_platform_name_x86_64
+                "ARMV6" in normalizedArch -> R.string.boinc_platform_name_armv6
                 "ARM" in normalizedArch -> R.string.boinc_platform_name_arm
                 "86" in normalizedArch -> R.string.boinc_platform_name_x86
                 else -> {
-                    if (Logging.ERROR)
-                        Log.w(Logging.TAG, "could not map os.arch ($arch) to platform, default to arm.")
+                    Logging.logWarning(Logging.Category.MONITOR, "could not map os.arch ($arch) to platform, default to arm.")
+
                     R.string.boinc_platform_name_arm
                 }
             }
-            if (Logging.ERROR)
-                Log.d(Logging.TAG, "BOINC platform: ${getString(platformId)} for os.arch: $arch")
+
+            Logging.logInfo(Logging.Category.MONITOR, "BOINC platform: ${getString(platformId)} for os.arch: $arch")
+
             return platformId
         }
 
@@ -146,12 +150,14 @@ class Monitor : LifecycleService() {
         get() {
             var platformName = ""
             val arch = System.getProperty("os.arch") ?: ""
-            val normalizedArch = arch.toUpperCase(Locale.US)
-            if (normalizedArch.containsAny("ARM64", "AARCH64"))
+            val normalizedArch = arch.uppercase(Locale.US)
+            if (normalizedArch.containsAny("ARM64", "AARCH64", "ARMV6"))
                 platformName = getString(R.string.boinc_platform_name_arm)
             else if ("X86_64" in normalizedArch)
                 platformName = getString(R.string.boinc_platform_name_x86)
-            if (Logging.ERROR) Log.d(Logging.TAG, "BOINC Alt platform: $platformName for os.arch: $arch")
+            
+            Logging.logInfo(Logging.Category.MONITOR, "BOINC Alt platform: $platformName for os.arch: $arch")
+            
             return platformName
         }
 
@@ -165,17 +171,24 @@ class Monitor : LifecycleService() {
 
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
-        if (Logging.DEBUG) Log.d(Logging.TAG, "Monitor onBind")
+        
+        Logging.logDebug(Logging.Category.MONITOR, "Monitor onBind")
+        
         return mBinder
     }
 
     override fun onCreate() {
         (application as BOINCApplication).appComponent.inject(this)
         super.onCreate()
-        Log.d(Logging.TAG, "Monitor onCreate()")
+
+        // Read User log level and set logLevel of Logging Class
+        Logging.setLogLevel(appPreferences.logLevel)
+        Logging.setLogCategories(appPreferences.logCategories)
+
+        Logging.logDebug(Logging.Category.MONITOR, "Monitor onCreate()")
 
         // populate attributes with XML resource values
-        boincWorkingDir = getString(R.string.client_path)
+        boincWorkingDir = applicationInfo.dataDir + "/" + getString(R.string.client_path)
         fileNameClient = getString(R.string.client_name)
         fileNameCABundle = getString(R.string.client_cabundle)
         fileNameClientConfig = getString(R.string.client_config)
@@ -186,9 +199,8 @@ class Monitor : LifecycleService() {
         clientStatusInterval = resources.getInteger(R.integer.status_update_interval_ms)
         deviceStatusIntervalScreenOff = resources.getInteger(R.integer.device_status_update_screen_off_every_X_loop)
         clientSocketAddress = getString(R.string.client_socket_address)
-        if (Logging.ERROR) {
-            Log.d(Logging.TAG, "Monitor onCreate(): singletons initialized")
-        }
+
+        Logging.logDebug(Logging.Category.MONITOR, "Monitor onCreate(): singletons initialized")
 
         // set current screen on/off status
         screenOn = getSystemService<PowerManager>()!!.isScreenOnCompat
@@ -202,7 +214,9 @@ class Monitor : LifecycleService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (Logging.ERROR) Log.d(Logging.TAG, "Monitor onDestroy()")
+
+        Logging.logDebug(Logging.Category.MONITOR, "Monitor onDestroy()")
+        
         updateBroadcastEnabled = false // prevent broadcast from currently running update task
         updateTimer.cancel() // cancel task
 
@@ -213,7 +227,7 @@ class Monitor : LifecycleService() {
             // remove screen on/off receiver
             unregisterReceiver(screenOnOffReceiver)
         } catch (e: Exception) {
-            if (Logging.ERROR) Log.e(Logging.TAG, "Monitor.onDestroy error: ", e)
+            Logging.logException(Logging.Category.MONITOR, "Monitor.onDestroy error: ", e)
         }
         updateBroadcastEnabled = false // prevent broadcast from currently running update task
         updateTimer.cancel() // cancel task
@@ -224,14 +238,14 @@ class Monitor : LifecycleService() {
             clientStatus.setWakeLock(false)
             clientStatus.setWifiLock(false)
         } catch (e: Exception) {
-            if (Logging.ERROR) Log.e(Logging.TAG, "Monitor.onDestroy error: ", e)
+            Logging.logException(Logging.Category.MONITOR, "Monitor.onDestroy error: ", e)
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         //this gets called after startService(intent) (either by BootReceiver or SplashActivity, depending on the user's autostart configuration)
-        if (Logging.ERROR) Log.d(Logging.TAG, "Monitor onStartCommand()")
+        Logging.logDebug(Logging.Category.MONITOR, "Monitor onStartCommand()")
 
         // try to acquire BOINC mutex
         // run here in order to recover, if mutex holding app gets closed.
@@ -242,12 +256,14 @@ class Monitor : LifecycleService() {
             // when previous executions are delayed (e.g. during clientSetup() )
             updateTimer.schedule(statusUpdateTask, 0, clientStatusInterval.toLong())
         }
-        if (!mutex.isAcquired && Logging.ERROR) Log.e(Logging.TAG, "Monitor.onStartCommand: mutex acquisition failed, do not start BOINC.")
+        if (!mutex.isAcquired) Logging.logError(Logging.Category.MONITOR, "Monitor.onStartCommand: mutex acquisition failed, do not start BOINC.")
 
         // execute action if one is explicitly requested (e.g. from notification)
         if (intent != null) {
             val actionCode = intent.getIntExtra("action", -1)
-            if (Logging.DEBUG) Log.d(Logging.TAG, "Monitor.onStartCommand() with action code: $actionCode")
+            
+            Logging.logDebug(Logging.Category.MONITOR, "Monitor.onStartCommand() with action code: $actionCode")
+            
             when (actionCode) {
                 1 -> lifecycleScope.launch { setClientRunMode(RUN_MODE_NEVER) }
                 2 -> lifecycleScope.launch { setClientRunMode(RUN_MODE_AUTO) }
@@ -269,11 +285,13 @@ class Monitor : LifecycleService() {
      */
     fun forceRefresh() {
         if (!mutex.isAcquired) return  // do not try to update if client is not running
-        if (Logging.DEBUG) Log.d(Logging.TAG, "forceRefresh()")
+        
+        Logging.logDebug(Logging.Category.MONITOR, "forceRefresh()")
+        
         try {
             updateTimer.schedule(StatusUpdateTimerTask(), 0)
         } catch (e: Exception) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "Monitor.forceRefresh error: ", e)
+            Logging.logException(Logging.Category.MONITOR, "Monitor.forceRefresh error: ", e)
         } // throws IllegalStateException if called after timer got cancelled, i.e. after manual shutdown
     }
 
@@ -287,6 +305,14 @@ class Monitor : LifecycleService() {
         if (!file.exists()) {
             file.createNewFile()
         }
+    }
+
+    //Kill boinc client nicely
+    fun quitClient() : Boolean {
+        if(clientInterface.isConnected) {
+            return clientInterface.quit()
+        }
+        return true
     }
     // --end-- public methods for Activities
     // multi-threaded frequent information polling
@@ -338,7 +364,8 @@ class Monitor : LifecycleService() {
             // forceCompleteUpdate: read complete status, independently of screen setting
             if (screenOn || forceCompleteUpdate) {
                 // complete status read, with broadcast
-                if (Logging.VERBOSE) Log.d(Logging.TAG, "readClientStatus(): screen on, get complete status")
+                Logging.logVerbose(Logging.Category.MONITOR, "readClientStatus(): screen on, get complete status")
+                
                 status = clientInterface.ccStatus
                 val state = clientInterface.state
                 val transfers = clientInterface.fileTransfers
@@ -357,7 +384,8 @@ class Monitor : LifecycleService() {
                     }
                     if (transfers == null) nullValues += "transfers "
                     if (acctMgrInfo == null) nullValues += "acctMgrInfo "
-                    if (Logging.ERROR) Log.e(Logging.TAG, "readClientStatus(): connection problem, null: $nullValues")
+                    
+                    Logging.logError(Logging.Category.MONITOR, "readClientStatus(): connection problem, null: $nullValues")
                 }
 
                 // update notices notification
@@ -376,13 +404,14 @@ class Monitor : LifecycleService() {
             }
             val computing = (status.taskSuspendReason == SUSPEND_NOT_SUSPENDED
                     || status.taskSuspendReason == SUSPEND_REASON_CPU_THROTTLE)
-            if (Logging.VERBOSE) Log.d(Logging.TAG, "readClientStatus(): computation enabled: $computing")
+            
+            Logging.logVerbose(Logging.Category.MONITOR, "readClientStatus(): computation enabled: $computing")
+            
             clientStatus.setWifiLock(computing)
             clientStatus.setWakeLock(computing)
             clientNotification.update(clientStatus, this, computing)
         } catch (e: Exception) {
-            if (Logging.ERROR)
-                Log.e(Logging.TAG, "Monitor.readClientStatus exception: " + e.message, e)
+            Logging.logException(Logging.Category.MONITOR, "Monitor.readClientStatus exception: " + e.message, e)
         }
     }
 
@@ -391,17 +420,18 @@ class Monitor : LifecycleService() {
      * BOINC client uses this data to enforce preferences, e.g. suspend battery but requires information only/best available through Java API calls.
      */
     private fun reportDeviceStatus() {
-        if (Logging.VERBOSE) Log.d(Logging.TAG, "reportDeviceStatus()")
+        Logging.logVerbose(Logging.Category.MONITOR, "reportDeviceStatus()")
+        
         try {
             // set devices status
             // make sure deviceStatus is initialized
             val reportStatusSuccess = clientInterface.reportDeviceStatus(deviceStatus.update(screenOn)) // transmit device status via rpc
             if (reportStatusSuccess)
                 screenOffStatusOmitCounter = 0
-            else if (Logging.DEBUG)
-                Log.d(Logging.TAG, "reporting device status returned false.")
+            else
+                Logging.logDebug(Logging.Category.MONITOR, "reporting device status returned false.")
         } catch (e: Exception) {
-            if (Logging.ERROR) Log.e(Logging.TAG, "Monitor.reportDeviceStatus excpetion: " + e.message)
+            Logging.logError(Logging.Category.MONITOR, "Monitor.reportDeviceStatus exception: " + e.message)
         }
     }
     // --end-- multi-threaded frequent information polling
@@ -415,7 +445,8 @@ class Monitor : LifecycleService() {
      * @return Boolean whether connection established successfully
      */
     private fun clientSetup(): Boolean {
-        if (Logging.ERROR) Log.d(Logging.TAG, "Monitor.clientSetup()")
+        Logging.logVerbose(Logging.Category.MONITOR, "Monitor.clientSetup()")
+        
         clientStatus.setSetupStatus(ClientStatus.SETUP_STATUS_LAUNCHING, true)
         val clientProcessName = boincWorkingDir + fileNameClient
         val md5AssetClient = computeMd5(fileNameClient, true)
@@ -425,7 +456,7 @@ class Monitor : LifecycleService() {
         // of the package. Shutdown the currently running client if needed.
         //
         if (forceReinstall || md5InstalledClient != md5AssetClient) {
-            if (Logging.DEBUG) Log.d(Logging.TAG, "Hashes of installed client does not match binary in assets - re-install.")
+            Logging.logDebug(Logging.Category.MONITOR, "Hashes of installed client does not match binary in assets - re-install.")
 
             // try graceful shutdown using RPC (faster)
             if (getPidForProcessName(clientProcessName) != null && connectClient()) {
@@ -436,11 +467,10 @@ class Monitor : LifecycleService() {
                 while (x < attempts) {
                     Thread.sleep(sleepPeriod.toLong())
                     if (getPidForProcessName(clientProcessName) == null) { //client is now closed
-                        if (Logging.DEBUG) {
-                            Log.d(Logging.TAG,
-                                    "quitClient: gracefull RPC shutdown successful after " + x +
-                                            " seconds")
-                        }
+                        Logging.logDebug(Logging.Category.MONITOR,
+                                "quitClient: graceful RPC shutdown successful after " + x +
+                                " seconds")
+
                         x = attempts
                     }
                     x++
@@ -454,7 +484,7 @@ class Monitor : LifecycleService() {
 
             // at this point client is definitely not running. install new binary...
             if (!installClient()) {
-                if (Logging.ERROR) Log.w(Logging.TAG, "BOINC client installation failed!")
+                Logging.logError(Logging.Category.MONITOR, "BOINC client installation failed!")
                 return false
             }
         }
@@ -462,9 +492,11 @@ class Monitor : LifecycleService() {
         // Start the BOINC client if we need to.
         val clientPid = getPidForProcessName(clientProcessName)
         if (clientPid == null) {
-            if (Logging.ERROR) Log.d(Logging.TAG, "Starting the BOINC client")
-            if (!runClient()) {
-                if (Logging.ERROR) Log.d(Logging.TAG, "BOINC client failed to start")
+            Logging.logInfo(Logging.Category.MONITOR, "Starting the BOINC client")
+            
+            if (!runClient(appPreferences.isRemote)) {
+                Logging.logError(Logging.Category.MONITOR, "BOINC client failed to start")
+                
                 return false
             }
         }
@@ -476,7 +508,7 @@ class Monitor : LifecycleService() {
         var connected = false
         var counter = 0
         while (!connected && counter < retryAttempts) {
-            if (Logging.DEBUG) Log.d(Logging.TAG, "Attempting BOINC client connection...")
+            Logging.logDebug(Logging.Category.MONITOR, "Attempting BOINC client connection...")
             connected = connectClient()
             counter++
             Thread.sleep(retryRate.toLong())
@@ -492,22 +524,24 @@ class Monitor : LifecycleService() {
                 // should output something like "Samsung Galaxy SII - SDK:15 ABI:armeabi-v7a"
                 val model = "${Build.MANUFACTURER} ${Build.MODEL} - SDK: ${Build.VERSION.SDK_INT} ABI: $abi"
                 val version = Build.VERSION.RELEASE
-                if (Logging.ERROR) {
-                    Log.d(Logging.TAG, "reporting hostinfo model name: $model")
-                    Log.d(Logging.TAG, "reporting hostinfo os name: Android")
-                    Log.d(Logging.TAG, "reporting hostinfo os version: $version")
-                }
+
+                Logging.logInfo(Logging.Category.MONITOR, "reporting hostinfo model name: $model")
+                Logging.logInfo(Logging.Category.MONITOR, "reporting hostinfo os name: Android")
+                Logging.logInfo(Logging.Category.MONITOR, "reporting hostinfo os version: $version")
+
                 clientInterface.setHostInfo(model, version)
                 init = true
             } catch (e: Exception) {
-                if (Logging.ERROR) Log.e(Logging.TAG, "Monitor.clientSetup() init failed: " + e.message)
+                Logging.logError(Logging.Category.MONITOR, "Monitor.clientSetup() init failed: " + e.message)
             }
         }
         if (init) {
-            if (Logging.ERROR) Log.d(Logging.TAG, "Monitor.clientSetup() - setup completed successfully")
+            Logging.logDebug(Logging.Category.MONITOR, "Monitor.clientSetup() - setup completed successfully")
+            
             clientStatus.setSetupStatus(ClientStatus.SETUP_STATUS_AVAILABLE, false)
         } else {
-            if (Logging.ERROR) Log.e(Logging.TAG, "Monitor.clientSetup() - setup experienced an error")
+            Logging.logError(Logging.Category.MONITOR, "Monitor.clientSetup() - setup experienced an error")
+            
             clientStatus.setSetupStatus(ClientStatus.SETUP_STATUS_ERROR, true)
         }
         return connected
@@ -519,18 +553,20 @@ class Monitor : LifecycleService() {
      *
      * @return Boolean success
      */
-    private fun runClient(): Boolean {
+    private fun runClient(remote : Boolean): Boolean {
+        isRemote = remote
         var success = false
         try {
-            val cmd = arrayOf(boincWorkingDir + fileNameClient, "--daemon", "--gui_rpc_unix_domain")
-            if (Logging.ERROR) Log.w(Logging.TAG, "Launching '${cmd[0]}' from '$boincWorkingDir'")
+            val param = if (remote) "--allow_remote_gui_rpc" else "--gui_rpc_unix_domain"
+            val cmd = arrayOf(boincWorkingDir + fileNameClient, "--daemon", param)
+            
+            Logging.logInfo(Logging.Category.MONITOR, "Launching '${cmd[0]}' from '$boincWorkingDir'")
+            
             Runtime.getRuntime().exec(cmd, null, File(boincWorkingDir))
             success = true
         } catch (e: IOException) {
-            if (Logging.ERROR) {
-                Log.d(Logging.TAG, "Starting BOINC client failed with exception: " + e.message)
-                Log.e(Logging.TAG, "IOException", e)
-            }
+            Logging.logError(Logging.Category.MONITOR, "Starting BOINC client failed with exception: " + e.message)
+            Logging.logException(Logging.Category.MONITOR, "IOException", e)
         }
         return success
     }
@@ -541,16 +577,21 @@ class Monitor : LifecycleService() {
      * @return Boolean success
      */
     private fun connectClient(): Boolean {
-        var success = clientInterface.open(clientSocketAddress)
+        var success = if (isRemote) {
+            clientInterface.connect()
+        } else {
+            clientInterface.open(clientSocketAddress)
+        }
         if (!success) {
-            if (Logging.ERROR) Log.e(Logging.TAG, "Connection failed!")
+            Logging.logError(Logging.Category.MONITOR, "Connection failed!")
+            
             return false
         }
 
         //authorize
         success = clientInterface.authorizeGuiFromFile(boincWorkingDir + fileNameGuiAuthentication)
-        if (!success && Logging.ERROR) {
-            Log.e(Logging.TAG, "Authorization failed!")
+        if (!success) {
+            Logging.logError(Logging.Category.MONITOR, "Authorization failed!")
         }
         return success
     }
@@ -563,23 +604,28 @@ class Monitor : LifecycleService() {
      */
     private fun installClient(): Boolean {
         if (!installFile(fileNameClient, true, "")) {
-            if (Logging.ERROR) Log.d(Logging.TAG, INSTALL_FAILED + fileNameClient)
+            Logging.logError(Logging.Category.MONITOR, INSTALL_FAILED + fileNameClient)
+            
             return false
         }
         if (!installFile(fileNameCABundle, false, "")) {
-            if (Logging.ERROR) Log.d(Logging.TAG, INSTALL_FAILED + fileNameCABundle)
+            Logging.logError(Logging.Category.MONITOR, INSTALL_FAILED + fileNameCABundle)
+            
             return false
         }
         if (!installFile(fileNameClientConfig, false, "")) {
-            if (Logging.ERROR) Log.d(Logging.TAG, INSTALL_FAILED + fileNameClientConfig)
+            Logging.logError(Logging.Category.MONITOR, INSTALL_FAILED + fileNameClientConfig)
+            
             return false
         }
         if (!installFile(fileNameAllProjectsList, false, "")) {
-            if (Logging.ERROR) Log.d(Logging.TAG, INSTALL_FAILED + fileNameAllProjectsList)
+            Logging.logError(Logging.Category.MONITOR, INSTALL_FAILED + fileNameAllProjectsList)
+            
             return false
         }
         if (!installFile(fileNameNoMedia, false, ".$fileNameNoMedia")) {
-            if (Logging.ERROR) Log.d(Logging.TAG, INSTALL_FAILED + fileNameNoMedia)
+            Logging.logError(Logging.Category.MONITOR, INSTALL_FAILED + fileNameNoMedia)
+            
             return false
         }
         return true
@@ -613,13 +659,12 @@ class Monitor : LifecycleService() {
             if (executable) {
                 success = target.setExecutable(true) // return false, if not executable
             }
-            if (Logging.ERROR) Log.d(Logging.TAG, "Installation of " + source + " successful. Executable: " +
+
+            Logging.logDebug(Logging.Category.MONITOR, "Installation of " + source + " successful. Executable: " +
                     executable + "/" + success)
         } catch (ioe: IOException) {
-            if (Logging.ERROR) {
-                Log.e(Logging.TAG, IOEXCEPTION_LOG + ioe.message)
-                Log.d(Logging.TAG, "Install of $source failed.")
-            }
+            Logging.logError(Logging.Category.MONITOR, IOEXCEPTION_LOG + ioe.message)
+            Logging.logError(Logging.Category.MONITOR, "Install of $source failed.")
         }
         return success
     }
@@ -633,6 +678,7 @@ class Monitor : LifecycleService() {
         get() {
             var archAssetsDirectory = ""
             when (boincPlatform) {
+                R.string.boinc_platform_name_armv6 -> archAssetsDirectory = getString(R.string.assets_dir_armv6)
                 R.string.boinc_platform_name_arm -> archAssetsDirectory = getString(R.string.assets_dir_arm)
                 R.string.boinc_platform_name_arm64 -> archAssetsDirectory = getString(R.string.assets_dir_arm64)
                 R.string.boinc_platform_name_x86 -> archAssetsDirectory = getString(R.string.assets_dir_x86)
@@ -661,7 +707,7 @@ class Monitor : LifecycleService() {
             source.close()
             return md5
         } catch (e: IOException) {
-            if (Logging.ERROR) Log.e(Logging.TAG, IOEXCEPTION_LOG + e.message)
+            Logging.logError(Logging.Category.MONITOR, IOEXCEPTION_LOG + e.message)
         }
         return ""
     }
@@ -683,12 +729,13 @@ class Monitor : LifecycleService() {
             processLines = isr.readLines()
             isr.close()
         } catch (e: Exception) {
-            if (Logging.ERROR) Log.e(Logging.TAG, "Exception: " + e.message)
+            Logging.logError(Logging.Category.MONITOR, "Exception: " + e.message)
+            
             return null
         }
         if (processLines.size < 2) {
-            if (Logging.ERROR)
-                Log.e(Logging.TAG, "getPidForProcessName(): ps output has less than 2 lines, failure!")
+            Logging.logError(Logging.Category.MONITOR, "getPidForProcessName(): ps output has less than 2 lines, failure!")
+            
             return null
         }
 
@@ -698,17 +745,18 @@ class Monitor : LifecycleService() {
         if (pidIndex == -1) {
             return null
         }
-        if (Logging.DEBUG)
-            Log.d(Logging.TAG, "getPidForProcessName(): PID at index: $pidIndex for output:" +
-                    " ${processLines[0]}")
+
+        Logging.logDebug(Logging.Category.MONITOR, "getPidForProcessName(): PID at index: $pidIndex for output:" +
+                " ${processLines[0]}")
+
         var pid: Int? = null
         for (y in 1 until processLines.size) {
             var found = false
             val comps = processLines[y].split("[\\s]+".toRegex()).toTypedArray()
             for (arg in comps) {
                 if (arg == processName) {
-                    if (Logging.DEBUG)
-                        Log.d(Logging.TAG, "getPidForProcessName(): $processName found in line: $y")
+                    Logging.logDebug(Logging.Category.MONITOR, "getPidForProcessName(): $processName found in line: $y")
+                    
                     found = true
                     break // Break out of inner foreach (comps) loop
                 }
@@ -716,19 +764,18 @@ class Monitor : LifecycleService() {
             if (found) {
                 try {
                     pid = comps[pidIndex].toInt()
-                    if (Logging.ERROR)
-                        Log.d(Logging.TAG, "getPidForProcessName(): pid: $pid")
+                    
+                    Logging.logDebug(Logging.Category.MONITOR, "getPidForProcessName(): pid: $pid")
                 } catch (e: NumberFormatException) {
-                    if (Logging.ERROR)
-                        Log.e(Logging.TAG, "getPidForProcessName(): NumberFormatException for "
-                                + "${comps[pidIndex]} at index: $pidIndex")
+                    Logging.logError(Logging.Category.MONITOR, "getPidForProcessName(): NumberFormatException for " +
+                            "${comps[pidIndex]} at index: $pidIndex")
                 }
                 break // Break out of outer for (processLinesAr) loop
             }
         }
         // if not happen in ps output, not running?!
-        if (pid == null && Logging.ERROR)
-            Log.d(Logging.TAG, "getPidForProcessName(): $processName not found in ps output!")
+        if (pid == null)
+            Logging.logError(Logging.Category.MONITOR, "getPidForProcessName(): $processName not found in ps output!")
 
         // Find required pid
         return pid
@@ -744,13 +791,13 @@ class Monitor : LifecycleService() {
 
         // client PID could not be read, client already ended / not yet started?
         if (clientPid == null) {
-            if (Logging.ERROR)
-                Log.d(Logging.TAG, "quitProcessOsLevel could not find PID, already ended or not" +
-                        " yet started?")
+            Logging.logError(Logging.Category.MONITOR, "quitProcessOsLevel could not find PID, already ended or not" +
+                    " yet started?")
+
             return
         }
-        if (Logging.DEBUG)
-            Log.d(Logging.TAG, "quitProcessOsLevel for $processName, pid: $clientPid")
+
+        Logging.logDebug(Logging.Category.MONITOR, "quitProcessOsLevel for $processName, pid: $clientPid")
 
         // Do not just kill the client on the first attempt.  That leaves dangling
         // science applications running which causes repeated spawning of applications.
@@ -765,9 +812,9 @@ class Monitor : LifecycleService() {
         while (x < attempts) {
             Thread.sleep(sleepPeriod.toLong())
             if (getPidForProcessName(processName) == null) { //client is now closed
-                if (Logging.DEBUG)
-                    Log.d(Logging.TAG, "quitClient: graceful SIGQUIT shutdown successful after" +
-                            " $x seconds")
+                Logging.logDebug(Logging.Category.MONITOR, "quitClient: graceful SIGQUIT shutdown successful after" +
+                        " $x seconds")
+                
                 x = attempts
             }
             x++
@@ -775,12 +822,13 @@ class Monitor : LifecycleService() {
         clientPid = getPidForProcessName(processName)
         if (clientPid != null) {
             // Process is still alive, send SIGKILL
-            if (Logging.ERROR) Log.w(Logging.TAG, "SIGQUIT failed. SIGKILL pid: $clientPid")
+            Logging.logError(Logging.Category.MONITOR, "SIGQUIT failed. SIGKILL pid: $clientPid")
+            
             Process.killProcess(clientPid)
         }
         clientPid = getPidForProcessName(processName)
-        if (clientPid != null && Logging.ERROR) {
-            Log.w(Logging.TAG, "SIGKILL failed. still living pid: $clientPid")
+        if (clientPid != null) {
+            Logging.logError(Logging.Category.MONITOR, "SIGKILL failed. still living pid: $clientPid")
         }
     }
     // --end-- BOINC client installation and run-time management
@@ -797,13 +845,14 @@ class Monitor : LifecycleService() {
                 // forces report of device status at next scheduled update
                 // allows timely reaction to screen off for resume of computation
                 screenOffStatusOmitCounter = deviceStatusIntervalScreenOff
-                if (Logging.DEBUG)
-                    Log.d(Logging.TAG, "screenOnOffReceiver: screen turned off")
+                
+                Logging.logDebug(Logging.Category.MONITOR, "screenOnOffReceiver: screen turned off")
             }
             if (action == Intent.ACTION_SCREEN_ON) {
                 screenOn = true
-                if (Logging.DEBUG)
-                    Log.d(Logging.TAG, "screenOnOffReceiver: screen turned on, force data refresh...")
+                
+                Logging.logDebug(Logging.Category.MONITOR, "screenOnOffReceiver: screen turned on, force data refresh...")
+                
                 forceRefresh()
             }
         }
@@ -813,8 +862,7 @@ class Monitor : LifecycleService() {
         try {
             mBinder.setRunMode(runMode)
         } catch (e: RemoteException) {
-            if (Logging.ERROR)
-                Log.e(Logging.TAG, "setClientRunMode() error: ", e)
+            Logging.logException(Logging.Category.MONITOR, "setClientRunMode() error: ", e)
         }
         return@coroutineScope
     }
@@ -886,7 +934,7 @@ class Monitor : LifecycleService() {
             try {
                 return deviceStatus.isStationaryDeviceSuspected
             } catch (e: Exception) {
-                if (Logging.ERROR) Log.e(Logging.TAG, "Monitor.IMonitor.Stub: isStationaryDeviceSuspected() error: ", e)
+                Logging.logException(Logging.Category.MONITOR, "Monitor.IMonitor.Stub: isStationaryDeviceSuspected() error: ", e)
             }
             return false
         }
@@ -921,7 +969,7 @@ class Monitor : LifecycleService() {
             try {
                 return deviceStatus.status.batteryChargePct
             } catch (e: Exception) {
-                if (Logging.ERROR) Log.e(Logging.TAG, "Monitor.IMonitor.Stub: getBatteryChargeStatus() error: ", e)
+                Logging.logException(Logging.Category.MONITOR, "Monitor.IMonitor.Stub: getBatteryChargeStatus() error: ", e)
             }
             return 0
         }
@@ -1050,6 +1098,11 @@ class Monitor : LifecycleService() {
         }
 
         @Throws(RemoteException::class)
+        override fun getIsRemote(): Boolean {
+            return appPreferences.isRemote
+        }
+
+        @Throws(RemoteException::class)
         override fun getAutostart(): Boolean {
             return appPreferences.autostart
         }
@@ -1067,6 +1120,16 @@ class Monitor : LifecycleService() {
         @Throws(RemoteException::class)
         override fun setLogLevel(level: Int) {
             appPreferences.logLevel = level
+        }
+
+        @Throws(RemoteException::class)
+        override fun getLogCategories(): List<String> {
+            return appPreferences.logCategories
+        }
+
+        @Throws(RemoteException::class)
+        override fun setLogCategories(categories: List<String>) {
+            appPreferences.logCategories = categories
         }
 
         @Throws(RemoteException::class)
@@ -1135,6 +1198,11 @@ class Monitor : LifecycleService() {
         }
 
         @Throws(RemoteException::class)
+        override fun setIsRemote(isRemote: Boolean) {
+            appPreferences.isRemote = isRemote
+        }
+
+        @Throws(RemoteException::class)
         override fun setStationaryDeviceMode(mode: Boolean) {
             appPreferences.stationaryDeviceMode = mode
         }
@@ -1180,13 +1248,17 @@ class Monitor : LifecycleService() {
         }
 
         @Throws(RemoteException::class)
-        override fun getProjectInfo(url: String): ProjectInfo {
+        override fun getProjectInfo(url: String): ProjectInfo? {
             return clientInterface.getProjectInfo(url)
         }
 
         @Throws(RemoteException::class)
         override fun boincMutexAcquired(): Boolean {
             return mutex.isAcquired
+        }
+        @Throws(RemoteException::class)
+        override fun quitClient() : Boolean {
+            return this@Monitor.quitClient()
         }
     } // --end-- remote service
 

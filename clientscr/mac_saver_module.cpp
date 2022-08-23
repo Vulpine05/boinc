@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2020 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -317,7 +317,7 @@ CScreensaver::CScreensaver() {
     m_iGraphicsStartingMsgCounter = 0;
     saverState = SaverState_Idle;
     m_wasAlreadyRunning = false;
-    m_CoreClientPID = nil;
+    m_CoreClientPID = 0;
     setSSMessageText(0);
     m_CurrentBannerMessage = 0;
     m_bQuitDataManagementProc = false;
@@ -361,9 +361,7 @@ CScreensaver::CScreensaver() {
 
 
 int CScreensaver::Create() {
-    OSStatus err;
-    
-    // Ugly workaround for a problem with the System Preferences app
+        // Ugly workaround for a problem with the System Preferences app
     // For an unknown reason, when this screensaver is run using the 
     // Test button in the System Prefs Screensaver control panel, the 
     // control panel calls our stopAnimation function as soon as the 
@@ -382,8 +380,8 @@ int CScreensaver::Create() {
 
     // Calculate the estimated blank time by adding the starting
     //  time and and the user-specified time which is in minutes
-    // On dual-GPU Macbok Pros, the CScreensaver class will be
-    // constructed and destructed each time we switch beteen
+    // On dual-GPU Macbook Pros, the CScreensaver class will be
+    // constructed and destructed each time we switch between
     // battery and AC power, so we need to get the starting time
     // only once.
     if (!ScreenSaverStartTime) {
@@ -414,7 +412,7 @@ int CScreensaver::Create() {
             m_gfx_Cleanup_IPC = popen(m_gfx_Cleanup_Path, "w");
         }
         
-        err = initBOINCApp();
+        initBOINCApp();
 
         CGDisplayHideCursor(kCGNullDirectDisplay);
     
@@ -519,7 +517,6 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
     *coveredFreq = 0;
     pid_t myPid;
     CC_STATE ccstate;
-    OSStatus err;
     
     if (ScreenIsBlanked) {
         setSSMessageText(0);   // No text message
@@ -531,7 +528,7 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
     
     switch (saverState) {
     case SaverState_RelaunchCoreClient:
-        err = initBOINCApp();
+        initBOINCApp();
         break;
     
     case  SaverState_LaunchingCoreClient:
@@ -799,7 +796,7 @@ void CScreensaver::HandleRPCError() {
         // There is a possible race condition where the Core Client was in the  
         // process of shutting down just as ScreenSaver started, so initBOINCApp() 
         // found it already running but now it has shut down.  This code takes 
-        // care of that and other situations where the Core Client quits unexpectedy.  
+        // care of that and other situations where the Core Client quits unexpectedly.  
         // Code in initBOINC_App() limits # launch retries to 3 to prevent thrashing.
         if (getClientPID() == 0) {
             saverState = SaverState_RelaunchCoreClient;

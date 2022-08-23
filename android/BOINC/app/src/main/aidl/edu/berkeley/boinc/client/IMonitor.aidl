@@ -75,7 +75,7 @@ int getBoincPlatform();                        // should be not necessary to be 
 void cancelNoticeNotification();
 boolean getWelcomeStateFile();
 void setWelcomeStateFile();
-
+boolean quitClient();
 /////// client status //////////////////////////////////////////
 boolean getAcctMgrInfoPresent();  // clientStatus.getAcctMgrInfo().present;
 int getSetupStatus();         // clientStatus.setupStatus;
@@ -101,10 +101,13 @@ List<ImageWrapper> getSlideshowForProject(in String url);   // clientStatus.getS
 void setAutostart(in boolean isAutoStart);          // Monitor.getAppPrefs().setAutostart(boolean);
 void setShowNotificationForNotices(in boolean isShow);   // Monitor.getAppPrefs().setShowNotificationForNotices(boolean);
 boolean getShowAdvanced();           // Monitor.getAppPrefs().getShowAdvanced();
+boolean getIsRemote();              // Monitor.getAppPrefs().getIsRemote();
 boolean getAutostart();              // Monitor.getAppPrefs().getAutostart();
 boolean getShowNotificationForNotices();       // Monitor.getAppPrefs().getShowNotificationForNotices();
 int getLogLevel();                   // Monitor.getAppPrefs().getLogLevel();
 void setLogLevel(in int level);               // Monitor.getAppPrefs().setLogLevel(int);
+List<String> getLogCategories();
+void setLogCategories(in List<String> categories);
 void setPowerSourceAc(in boolean src);      // Monitor.getAppPrefs().setPowerSourceAc(boolean);
 void setPowerSourceUsb(in boolean src);     // Monitor.getAppPrefs().setPowerSourceUsb(boolean);
 void setPowerSourceWireless(in boolean src); // Monitor.getAppPrefs().setPowerSourceWireless(boolean);
@@ -113,6 +116,7 @@ boolean getPowerSourceAc();
 boolean getPowerSourceUsb();
 boolean getPowerSourceWireless();
 void setShowAdvanced(in boolean isShow);
+void setIsRemote(in boolean isRemote);
 void setStationaryDeviceMode(in boolean mode);
 boolean getSuspendWhenScreenOn();
 void setSuspendWhenScreenOn(in boolean swso);

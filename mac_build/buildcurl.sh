@@ -2,7 +2,7 @@
 
 # This file is part of BOINC.
 # http://boinc.berkeley.edu
-# Copyright (C) 2020 University of California
+# Copyright (C) 2021 University of California
 #
 # BOINC is free software; you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License
@@ -36,10 +36,17 @@
 # Updated 1/26/18 to get directory names of c-ares and OpenSSL from dependencyNames.sh
 # Updated 2/22/18 to avoid APIs not available in earlier versions of OS X
 # Updated 1/23/19 use libc++ instead of libstdc++ for Xcode 10 compatibility
-# Updated 8/22/20 TO build Apple Silicon / arm64 and x86_64 Universal binary
+# Updated 8/22/20 to build Apple Silicon / arm64 and x86_64 Universal binary
 # Updated 12/24/20 for curl 7.73.0
+# Updated 5/18/21 for compatibility with zsh
+# Updated 10/11/21 to use Secure Transport instead of OpenSSL (uses MacOS certificate store 
+#   instead of ca-bundle.crt)
+# Updated 11/16/21 for curl 7.79.1
 #
-## This script requires OS 10.8 or later
+## Curl's configure and make set the "-Werror=partial-availability" compiler flag, 
+## which generates an error if there is an API not available in our Deployment
+## Target. This helps ensure curl won't try to use unavailable APIs on older Mac
+## systems supported by BOINC.
 #
 ## After first installing Xcode, you must have opened Xcode and
 ## clicked the Install button on the dialog which appears to
@@ -55,19 +62,23 @@
 ## if --prefix is given as absolute path the library is installed into there
 ## use -q or --quiet to redirect build output to /dev/null instead of /dev/stdout
 #
-## NOTE: cURL depends on OpenSLL and c-ares, so they must be built before cURL.
+## NOTE: cURL depends on c-ares, so it must be built before cURL.
 #
 
 function patch_curl_config {
-    # Patch curl_config.h to not use clock_gettime(), which is
-    # defined in OS 10.12 SDK but was not available before OS 10.12.
-    # If building with an older SDK or an older version of Xcode, these
-    # patches will fail because config has already set our desired values.
+    # If building with some SDKs or version of Xcode, either or
+    # both of these patches will fail because config has already 
+    # set our desired values.
+    #
+    # The __builtin_available() function may cause problems in 
+    # static libraries or older versions of MacOS. It's unclear
+    # to me whether this is still an issue, but I'm keeping this
+    # patch in here for now to be safe. - CF 10/11/21
     rm -f /tmp/curl_config_h_diff1
     cat >> /tmp/curl_config_h_diff1 << ENDOFFILE
 --- lib/curl_config.h    2018-02-22 04:21:52.000000000 -0800
 +++ lib/curl_config1.h.in    2018-02-22 04:29:56.000000000 -0800
-@@ -165,5 +165,5 @@
+@@ -168,5 +168,5 @@
 
  /* Define to 1 if you have the __builtin_available function. */
 -#define HAVE_BUILTIN_AVAILABLE 1
@@ -80,10 +91,13 @@ ENDOFFILE
     rm -f /tmp/curl_config_h_diff1
     rm -f lib/curl_config.h.rej
 
+    # Patch curl_config.h to not use clock_gettime(), which is
+    # defined in OS 10.12 SDK but was not available before OS 10.12.
+    rm -f /tmp/curl_config_h_diff2
     cat >> /tmp/curl_config_h_diff2 << ENDOFFILE
 --- lib/curl_config.h    2018-02-22 04:21:52.000000000 -0800
 +++ lib/curl_config2.h.in    2018-02-22 04:30:21.000000000 -0800
-@@ -168,5 +168,5 @@
+@@ -171,5 +171,5 @@
 
  /* Define to 1 if you have the clock_gettime function and monotonic timer. */
 -#define HAVE_CLOCK_GETTIME_MONOTONIC 1
@@ -134,19 +148,19 @@ fi
 GCC_can_build_x86_64="no"
 GCC_can_build_arm64="no"
 GCC_archs=`lipo -info "${GCCPATH}"`
-if [[ "${GCC_archs}" == *"x86_64"* ]]; then GCC_can_build_x86_64="yes"; fi
-if [[ "${GCC_archs}" == *"arm64"* ]]; then GCC_can_build_arm64="yes"; fi
+if [[ "${GCC_archs}" = *"x86_64"* ]]; then GCC_can_build_x86_64="yes"; fi
+if [[ "${GCC_archs}" = *"arm64"* ]]; then GCC_can_build_arm64="yes"; fi
 
 if [ "${doclean}" != "yes" ]; then
     if [ -f "${libPath}/libcurl.a" ]; then
         alreadyBuilt=1
 
-        if [ $GCC_can_build_x86_64 == "yes" ]; then
+        if [ $GCC_can_build_x86_64 = "yes" ]; then
             lipo "${libPath}/libcurl.a" -verify_arch x86_64
             if [ $? -ne 0 ]; then alreadyBuilt=0; doclean="yes"; fi
         fi
         
-        if [ $alreadyBuilt -eq 1 ] && [ $GCC_can_build_arm64 == "yes" ]; then
+        if [ $alreadyBuilt -eq 1 ] && [ $GCC_can_build_arm64 = "yes" ]; then
             lipo "${libPath}/libcurl.a" -verify_arch arm64
             if [ $? -ne 0 ]; then alreadyBuilt=0; doclean="yes"; fi
         fi
@@ -196,24 +210,30 @@ fi
 # x86_64 and arm64, so this is not currently an issue. 
 ## cp -f ../"${caresDirName}"/ares_build_x86_64.h /tmp/installed-c-ares/include/ares_build.h
 
+# Build for x86_64 architecture
+
 export PATH=/usr/local/bin:$PATH
 export CC="${GCCPATH}";export CXX="${GPPPATH}"
 export SDKROOT="${SDKPATH}"
-export MACOSX_DEPLOYMENT_TARGET=10.7
-export MAC_OS_X_VERSION_MAX_ALLOWED=1070
-export MAC_OS_X_VERSION_MIN_REQUIRED=1070
+export MACOSX_DEPLOYMENT_TARGET=10.10
+export MAC_OS_X_VERSION_MAX_ALLOWED=101000
+export MAC_OS_X_VERSION_MIN_REQUIRED=101000
+
+export LDFLAGS="-Wl,-syslibroot,${SDKPATH},-arch,x86_64"
+export CPPFLAGS="-isysroot ${SDKPATH} -arch x86_64 -mmacosx-version-min=10.10 -stdlib=libc++"
+export CXXFLAGS="-isysroot ${SDKPATH} -arch x86_64 -mmacosx-version-min=10.10 -stdlib=libc++"
+export CFLAGS="-isysroot ${SDKPATH} -mmacosx-version-min=10.10 -arch x86_64"
 
 if [ "x${lprefix}" != "x" ]; then
-    export LDFLAGS="-Wl,-syslibroot,${SDKPATH},-arch,x86_64"
-    export CPPFLAGS="-isysroot ${SDKPATH} -arch x86_64 -stdlib=libc++"
-    export CXXFLAGS="-isysroot ${SDKPATH} -arch x86_64 -stdlib=libc++"
-    export CFLAGS="-isysroot ${SDKPATH} -arch x86_64"
-    PKG_CONFIG_PATH="${lprefix}/lib/pkgconfig" ./configure --prefix=${lprefix} --enable-ares --enable-shared=NO --without-libidn --without-libidn2 --without-nghttp2 --host=x86_64
+    PKG_CONFIG_PATH="${lprefix}/lib/pkgconfig" ./configure --prefix=${lprefix} --enable-ares --disable-shared --with-secure-transport --without-libidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --host=x86_64-apple-darwin
     if [ $? -ne 0 ]; then return 1; fi
 else
-    # Get the names of the current versions of c-ares and openssl from
-    # the dependencyNames.sh file in the same directory as this script.
+    # Get the name of the current versions of c-ares from the
+    # dependencyNames.sh file in the same directory as this script.
     myScriptPath="${BASH_SOURCE[0]}"
+    if [ -z "${myScriptPath}" ]; then
+        myScriptPath="$0"   # for zsh
+    fi
     myScriptDir="${myScriptPath%/*}"
     source "${myScriptDir}/dependencyNames.sh"
     if [ $? -ne 0 ]; then return 1; fi
@@ -228,18 +248,14 @@ else
         cd "${CURL_DIR}" || return 1
     fi
 
-    export LDFLAGS="-Wl,-syslibroot,${SDKPATH},-arch,x86_64 -L${CURL_DIR}/../${opensslDirName} "
-    export CPPFLAGS="-isysroot ${SDKPATH} -arch x86_64 -stdlib=libc++ -I${CURL_DIR}/../${opensslDirName}/include"
-    export CXXFLAGS="-isysroot ${SDKPATH} -arch x86_64 -stdlib=libc++ -I${CURL_DIR}/../${opensslDirName}/include"
-    export CFLAGS="-isysroot ${SDKPATH} -arch x86_64"
-    ./configure --enable-shared=NO --enable-ares="${libcares}" --without-libidn --without-libidn2 --without-nghttp2 --host=x86_64
+    ./configure --disable-shared --with-secure-transport --enable-ares="${libcares}" --without-libidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --host=x86_64-apple-darwin
     if [ $? -ne 0 ]; then return 1; fi
     echo ""
 fi
 
 patch_curl_config
 
-if [ "${doclean}" == "yes" ]; then
+if [ "${doclean}" = "yes" ]; then
     make clean
 fi
 
@@ -253,25 +269,21 @@ fi
 
 # Now see if we can build for arm64
 # Note: Some versions of Xcode 12 don't support building for arm64
-if [ $GCC_can_build_arm64 == "yes" ]; then
+if [ $GCC_can_build_arm64 = "yes" ]; then
+
+export LDFLAGS="-Wl,-syslibroot,${SDKPATH},-arch,arm64"
+export CPPFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos -mmacosx-version-min=10.10 -stdlib=libc++"
+export CXXFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos -mmacosx-version-min=10.10 -stdlib=libc++"
+export CFLAGS="-isysroot ${SDKPATH} -mmacosx-version-min=10.10 -target arm64-apple-macos"
 
 # c-ares configure creates a different ares_build.h file for each architecture
 # for a sanity check on size of long and socklen_t. But these are  identical for
 # x86_64 and arm64, so this is not currently an issue. 
 ## cp -f ../"${caresDirName}"/ares_build_arm.h /tmp/installed-c-ares/include/ares_build.h
-
     if [ "x${lprefix}" != "x" ]; then
-        export LDFLAGS="-Wl,-syslibroot,${SDKPATH},-arch,arm64"
-        export CPPFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7 -stdlib=libc++"
-        export CXXFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7 -stdlib=libc++"
-        export CFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7"
-        PKG_CONFIG_PATH="${lprefix}/lib/pkgconfig" ./configure --prefix=${lprefix} --enable-ares --enable-shared=NO --without-libidn --without-libidn2 --without-nghttp2 --host=arm
+        PKG_CONFIG_PATH="${lprefix}/lib/pkgconfig" ./configure --prefix=${lprefix} --enable-ares --disable-shared --with-secure-transport --without-libidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --host=arm-apple-darwin
     else
-        export LDFLAGS="-Wl,-syslibroot,${SDKPATH},-arch,arm64 -L${CURL_DIR}/../${opensslDirName} "
-        export CPPFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7 -stdlib=libc++ -I${CURL_DIR}/../${opensslDirName}/include"
-        export CXXFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7 -stdlib=libc++ -I${CURL_DIR}/../${opensslDirName}/include"
-        export CFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7"
-        ./configure --enable-shared=NO --enable-ares="${libcares}" --without-libidn --without-libidn2 --without-nghttp2 --host=arm
+        ./configure --disable-shared --with-secure-transport --enable-ares="${libcares}" --without-libidn --without-libidn2 --without-nghttp2 --without-ngtcp2 --without-nghttp3 --without-quiche --host=arm-apple-darwin
         echo ""
     fi
 

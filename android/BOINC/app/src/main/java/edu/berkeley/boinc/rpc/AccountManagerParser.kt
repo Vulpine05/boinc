@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  * 
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -69,7 +69,7 @@ class AccountManagerParser : BaseParser() {
                 }
             }
         } catch (e: Exception) {
-            if (Logging.ERROR) Log.e(Logging.TAG, "AccountManagerParser.endElement error: ", e)
+            Logging.logException(Logging.Category.XML, "AccountManagerParser.endElement error: ", e)
         }
         mElementStarted = false
     }
@@ -83,6 +83,9 @@ class AccountManagerParser : BaseParser() {
                 Xml.parse(rpcResult, parser)
                 parser.accountManagerInfos
             } catch (e: SAXException) {
+                Logging.logException(Logging.Category.RPC, "AccountManagerParser: malformed XML ", e)
+                Logging.logDebug(Logging.Category.XML, "AccountManagerParser: $rpcResult")
+
                 emptyList()
             }
         }

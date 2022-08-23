@@ -27,16 +27,12 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
-import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
-
 import androidx.appcompat.app.AppCompatActivity;
-
-import java.util.List;
-
 import edu.berkeley.boinc.databinding.AttachProjectCredentialInputLayoutBinding;
 import edu.berkeley.boinc.utils.Logging;
+import java.util.List;
 
 public class CredentialInputActivity extends AppCompatActivity {
     private AttachProjectCredentialInputLayoutBinding binding;
@@ -47,9 +43,9 @@ public class CredentialInputActivity extends AppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if(Logging.DEBUG) {
-            Log.d(Logging.TAG, "CredentialInputActivity onCreate");
-        }
+
+        Logging.logVerbose(Logging.Category.GUI_ACTIVITY, "CredentialInputActivity onCreate");
+
         doBindService();
         binding = AttachProjectCredentialInputLayoutBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -73,9 +69,7 @@ public class CredentialInputActivity extends AppCompatActivity {
 
     // triggered by continue button
     public void continueClicked(View v) {
-        if(Logging.DEBUG) {
-            Log.d(Logging.TAG, "CredentialInputActivity.continueClicked.");
-        }
+        Logging.logVerbose(Logging.Category.USER_ACTION, "CredentialInputActivity.continueClicked.");
 
         // set credentials in service
         if(asIsBound) {
@@ -85,26 +79,25 @@ public class CredentialInputActivity extends AppCompatActivity {
             final String password = binding.pwdInput.getText().toString();
             if(attachService.verifyInput(email, name, password)) {
                 attachService.setCredentials(email, name, password);
+            } else {
+                Logging.logWarning(Logging.Category.USER_ACTION, "CredentialInputActivity.continueClicked: empty credentials found");
+
+                return;
             }
-        }
-        else {
-            if(Logging.ERROR) {
-                Log.e(Logging.TAG, "CredentialInputActivity.continueClicked: service not bound.");
-            }
+        } else {
+            Logging.logError(Logging.Category.GUI_ACTIVITY, "CredentialInputActivity.continueClicked: service not bound.");
+
             return;
         }
 
-        if(Logging.DEBUG) {
-            Log.d(Logging.TAG, "CredentialInputActivity.continueClicked: starting BatchProcessingActivity...");
-        }
+        Logging.logVerbose(Logging.Category.USER_ACTION, "CredentialInputActivity.continueClicked: starting BatchProcessingActivity...");
+
         startActivity(new Intent(this, BatchProcessingActivity.class));
     }
 
     // triggered by individual button
     public void individualClicked(View v) {
-        if(Logging.DEBUG) {
-            Log.d(Logging.TAG, "CredentialInputActivity.individualClicked.");
-        }
+        Logging.logVerbose(Logging.Category.USER_ACTION, "CredentialInputActivity.individualClicked.");
 
         // set credentials in service, in case user typed before deciding btwn batch and individual attach
         if(asIsBound) {

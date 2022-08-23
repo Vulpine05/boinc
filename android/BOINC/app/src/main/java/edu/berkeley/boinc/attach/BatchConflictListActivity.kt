@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -22,7 +22,6 @@ import android.app.Service
 import android.content.*
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -50,9 +49,8 @@ class BatchConflictListActivity : AppCompatActivity(), IndividualCredentialInput
     // results.
     private val mClientStatusChangeRec: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (Logging.VERBOSE) {
-                Log.d(Logging.TAG, "BatchConflictListActivity ClientStatusChange - onReceive()")
-            }
+            Logging.logVerbose(Logging.Category.GUI_ACTIVITY, "BatchConflictListActivity ClientStatusChange - onReceive()")
+
             if (asIsBound) {
                 recyclerViewAdapter.notifyDataSetChanged()
             }
@@ -69,9 +67,8 @@ class BatchConflictListActivity : AppCompatActivity(), IndividualCredentialInput
 
             // set data, if manual url
             if (!manualUrl.isNullOrEmpty()) {
-                if (Logging.DEBUG) {
-                    Log.d(Logging.TAG, "BatchConflictListActivity manual URL found: $manualUrl")
-                }
+                Logging.logDebug(Logging.Category.GUI_ACTIVITY, "BatchConflictListActivity manual URL found: $manualUrl")
+
                 attachService!!.setManuallySelectedProject(manualUrl!!)
                 manualUrl = ""
             }
@@ -84,9 +81,8 @@ class BatchConflictListActivity : AppCompatActivity(), IndividualCredentialInput
                 adapter = recyclerViewAdapter
                 layoutManager = LinearLayoutManager(this@BatchConflictListActivity)
             }
-            if (Logging.DEBUG) {
-                Log.d(Logging.TAG, "BatchConflictListActivity setup list with " + results.size + " elements.")
-            }
+
+            Logging.logDebug(Logging.Category.GUI_ACTIVITY, "BatchConflictListActivity setup list with " + results.size + " elements.")
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
@@ -98,9 +94,9 @@ class BatchConflictListActivity : AppCompatActivity(), IndividualCredentialInput
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "BatchConflictListActivity onCreate")
-        }
+
+        Logging.logVerbose(Logging.Category.GUI_ACTIVITY, "BatchConflictListActivity onCreate")
+
         doBindService()
         // setup layout
         binding = AttachProjectBatchConflictsLayoutBinding.inflate(layoutInflater)
@@ -127,9 +123,8 @@ class BatchConflictListActivity : AppCompatActivity(), IndividualCredentialInput
     }
 
     override fun onDestroy() {
-        if (Logging.VERBOSE) {
-            Log.v(Logging.TAG, "BatchConflictListActivity onDestroy")
-        }
+        Logging.logVerbose(Logging.Category.GUI_ACTIVITY, "BatchConflictListActivity onDestroy")
+
         doUnbindService()
         super.onDestroy()
     }
@@ -159,9 +154,8 @@ class BatchConflictListActivity : AppCompatActivity(), IndividualCredentialInput
     }
 
     override fun onFinish(project: ProjectAttachWrapper, login: Boolean, email: String, name: String, pwd: String) {
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "BatchConflictListActivity onFinish of dialog")
-        }
+        Logging.logVerbose(Logging.Category.USER_ACTION, "BatchConflictListActivity onFinish of dialog")
+
         if (asIsBound && !attachService!!.verifyInput(email, name, pwd)) {
             return
         }
@@ -180,17 +174,15 @@ class BatchConflictListActivity : AppCompatActivity(), IndividualCredentialInput
 
     private suspend fun attachProject(project: ProjectAttachWrapper, login: Boolean, email: String,
                                       name: String, pwd: String) {
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "attachProject(): ${project.config?.name}")
-        }
+        Logging.logDebug(Logging.Category.PROJECTS, "attachProject(): ${project.config?.name}")
+
         if (asIsBound) {
             project.result = RESULT_ONGOING
             // adapt layout to changed state
             recyclerViewAdapter.notifyDataSetChanged()
         } else {
-            if (Logging.ERROR) {
-                Log.e(Logging.TAG, "attachProject(): service not bound, cancel.")
-            }
+            Logging.logError(Logging.Category.PROJECTS, "attachProject(): service not bound, cancel.")
+
             return
         }
 
@@ -202,9 +194,7 @@ class BatchConflictListActivity : AppCompatActivity(), IndividualCredentialInput
             project.lookupAndAttach(login)
         }
 
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "attachProject(): finished, result: " + project.result)
-        }
+        Logging.logDebug(Logging.Category.PROJECTS, "attachProject(): finished, result: " + project.result)
 
         // adapt layout to changed state
         recyclerViewAdapter.notifyDataSetChanged()

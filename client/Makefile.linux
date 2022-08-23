@@ -6,7 +6,7 @@
 #    make -f Makefile.linux clean all
 # 3) do the same in this dir
 
-CC = g++ -I ../ -I ../lib/
+CC = g++ -O4 -Wall -I ../ -I ../lib/
 
 PROGS = boinc boinccmd
 
@@ -134,9 +134,11 @@ clean:
 	rm -f $(PROGS) $(BOINC_OBJ) dependencies
 
 LIBS = ../lib/lib.a \
+    -L /usr/local/lib/ \
     -lpthread \
-    -lssl -lcrypto \
-    -L /usr/local/lib/ -lcurl -lz -ldl
+    -lX11 -lXss \
+    -lcurl -lssl -lcrypto \
+    -lz -ldl
 
 .cpp.o:
 	$(CC) -c -o $*.o $<

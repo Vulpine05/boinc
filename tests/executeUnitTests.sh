@@ -36,11 +36,15 @@ ROOTDIR=$(pwd)
 CI_RUN="${TRAVIS:-false}"
 report=""
 doclean=""
+xml=""
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
         --report-coverage)
         report="yes"
+        ;;
+        --report-xml)
+        xml="yes"
         ;;
         --clean)
         doclean="yes"
@@ -72,13 +76,9 @@ make
 if [ $? -ne 0 ]; then cd ../..; exit 1; fi
 
 for T in lib sched; do
-    [ -d "${T}" ] && ./${T}/test_${T};
+    XML_FLAGS=""
+    if [ "${xml}" = "yes" ]; then
+        XML_FLAGS="--gtest_output=xml:${T}_xml_report.xml"
+    fi
+    [ -d "${T}" ] && ./${T}/test_${T} ${XML_FLAGS};
 done
-
-cd ../..
-if [ "${report}" = "yes" ]; then
-    #for T in lib sched; do
-    #    [ -d "${T}" ] && gcov -lp *.o >/dev/null;
-    #done
-    bash <(curl -s https://codecov.io/bash)
-fi

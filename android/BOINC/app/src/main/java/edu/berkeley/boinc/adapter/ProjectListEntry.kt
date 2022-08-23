@@ -24,17 +24,8 @@ class ProjectListEntry {
     var info: ProjectInfo? = null
         private set
     var isChecked = false
-    var isAccountManager = false
-        private set
 
     constructor(info: ProjectInfo) {
         this.info = info
-    }
-
-    /**
-     * Creates Account manager list object
-     */
-    constructor() {
-        isAccountManager = true
     }
 }

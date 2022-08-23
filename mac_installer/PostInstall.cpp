@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2020 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -131,6 +131,10 @@ static Boolean IsUserLoggedIn(const char *userName);
 void FindAllVisibleUsers(void);
 long GetBrandID(char *path);
 int TestRPCBind(void);
+#ifdef __arm64__
+int check_rosetta2_installed();
+int optionally_install_rosetta2();
+#endif  // __arm64__
 pid_t FindProcessPID(char* name, pid_t thePID);
 static void SleepSeconds(double seconds);
 static OSErr QuitAppleEventHandler(const AppleEvent *appleEvt, AppleEvent* reply, UInt32 refcon);
@@ -189,9 +193,10 @@ enum { launchWhenDone,
 
 int main(int argc, char *argv[])
 {
-    Boolean                 Success;
     long                    brandID = 0;
     long                    oldBrandID = 0;
+    int                     major = 0;
+    int                     minor = 0;
     int                     i;
     pid_t                   installerPID = 0, coreClientPID = 0;
     OSStatus                err;
@@ -271,11 +276,12 @@ int main(int argc, char *argv[])
 
     LoadPreferredLanguages();
 
-    if (compareOSVersionTo(10, 7) < 0) {
+    sscanf(Deployment_target, "%i.%i", &major, &minor);
+    if (compareOSVersionTo(major, minor) < 0) {
         BringAppToFront();
         // Remove everything we've installed
         // "\pSorry, this version of GridRepublic requires system 10.6 or higher."
-        ShowMessage(false, "Sorry, this version of %s requires system 10.7 or higher.", brandName[brandID]);
+        ShowMessage(false, (char *)_("Sorry, this version of %s requires system %s or higher."), brandName[brandID], Deployment_target);
 
         // "rm -rf \"/Applications/GridRepublic Desktop.app\""
         sprintf(s, "rm -rf \"%s\"", appPath[brandID]);
@@ -303,29 +309,6 @@ int main(int argc, char *argv[])
     
     sleep (2);
 
-    // OS 10.6 and OS10.7 require screensavers built with Garbage Collection, but
-    // Xcode 5.0.2 was the last version of Xcode which supported building with
-    // Garbage Collection, so we have saved the screensaver executable with GC as
-    // a binary. The installer build script added it to the screen saver, which
-    // now contains both the code with Garbage Collection and the code with
-    // Automatic Reference Counting. Determine the correct one to use for this
-    // version of OS X and remove the other one.
-    if (compareOSVersionTo(10, 8) < 0) {
-        // "rm -rf \"/Library/Screen Savers/GridRepublic.saver/Contents/MacOS/BOINCSaver\""
-        sprintf(s, "rm -f \"/Library/Screen Savers/%s.saver/Contents/MacOS/%s\"", saverName[brandID], saverName[brandID]);
-        err = callPosixSpawn (s);
-        REPORT_ERROR(err);
-        sprintf(s, "mv -f \"/Library/Screen Savers/%s.saver/Contents/MacOS/BOINCSaver_MacOS10_6_7\" \"/Library/Screen Savers/%s.saver/Contents/MacOS/%s\"",
-            saverName[brandID], saverName[brandID], saverName[brandID]);
-        err = callPosixSpawn (s);
-        REPORT_ERROR(err);
-    } else {
-        // "rm -rf \"/Library/Screen Savers/GridRepublic.saver/Contents/MacOS/BOINCSaver_MacOS10_6_7\""
-        sprintf(s, "rm -f \"/Library/Screen Savers/%s.saver/Contents/MacOS/BOINCSaver_MacOS10_6_7\"", saverName[brandID]);
-        err = callPosixSpawn (s);
-        REPORT_ERROR(err);
-    }
-
     // Install all_projects_list.xml file, but only if one doesn't 
     // already exist, since a pre-existing one is probably newer.
     f = fopen("/Library/Application Support/BOINC Data/all_projects_list.xml", "r");
@@ -344,8 +327,16 @@ int main(int argc, char *argv[])
         tempDirName, ACCOUNT_DATA_FILENAME);
     err = callPosixSpawn (s);
     REPORT_ERROR(err);
+
+#ifdef __arm64__ 
+    int rosetta_result = check_rosetta2_installed();
+    printf("check_rosetta2_installed() returned %d\n", rosetta_result);
+    fflush(stdout);
     
-    Success = false;
+    if (rosetta_result == EBADARCH){
+        optionally_install_rosetta2();
+    }
+#endif  // __arm64__
     
 #ifdef SANDBOX
 
@@ -395,6 +386,8 @@ int main(int argc, char *argv[])
     
 #else   // ! defined(SANDBOX)
 
+    Boolean                 Success = false;
+    
     // The BOINC Manager and Core Client have the set-user-ID-on-execution 
     // flag set, so their ownership is important and must match the 
     // ownership of the BOINC Data directory.
@@ -722,6 +715,7 @@ int DeleteReceipt()
                 sprintf(s, "su -l \"%s\" -c 'open -jg \"%s\" --args -s'", pw->pw_name, appPath[brandID]);
                 err = callPosixSpawn(s);
                 printf("command: %s returned error %d\n", s, err);
+                fflush(stdout);
            }
         }
     }
@@ -998,6 +992,7 @@ Boolean SetLoginItemOSAScript(long brandID, Boolean deleteLogInItem, char *userN
             if (err) {
                 REPORT_ERROR(true);
                 fprintf(stdout, "[2] Command: %s returned error %d (try %d of 5)\n", cmd, (int) err, j);
+                fflush(stdout);
             }
             // Wait for the process to start
             for (i=0; i<50; ++i) {      // 5 seconds max delay
@@ -1267,7 +1262,7 @@ Boolean CheckDeleteFile(char *name)
 
 
 // If there are other copies of BOINC Manager with different branding
-// on the system, Noitifications may display the icon for the wrong
+// on the system, Notifications may display the icon for the wrong
 // branding, due to the Launch Services database having one of the
 // other copies of BOINC Manager as the first entry. Each user has
 // their own copy of the Launch Services database, so this must be
@@ -1296,10 +1291,12 @@ static void FixLaunchServicesDataBase(uid_t userID, long brandID) {
         seteuid(saved_uid);     // Set effective uid back to privileged user
             if (appRefs == NULL) {
                 printf("Call to LSCopyApplicationURLsForBundleIdentifier returned NULL\n");
+                fflush(stdout);
                 goto registerOurApp;
             }
         n = CFArrayGetCount(appRefs);   // Returns all results at once, in database order
         printf("LSCopyApplicationURLsForBundleIdentifier returned %ld results\n", n);
+        fflush(stdout);
     } else {
         n = 500;    // Prevent infinite loop
     }
@@ -1323,15 +1320,18 @@ static void FixLaunchServicesDataBase(uid_t userID, long brandID) {
             seteuid(saved_uid);     // Set effective uid back to privileged user
             if (err) {
                 printf("Call %ld to GetPathToAppFromID returned error %d\n", i, err);
+                fflush(stdout);
                 break;
             }
         }
         if (strncmp(boincPath, appPath[brandID], sizeof(boincPath)) == 0) {
             printf("**** Keeping %s\n", boincPath);
+            fflush(stdout);
             if (appRefs) CFRelease(appRefs);
             return;     // Our (possibly branded) BOINC Manager app is now at top of database
         }
         printf("Unregistering %3ld: %s\n", i, boincPath);
+        fflush(stdout);
         // Remove this entry from the Launch Services database
         sprintf(cmd, "sudo -u #%d /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -u \"%s\"", userID, boincPath);
         err = callPosixSpawn(cmd);
@@ -1347,6 +1347,7 @@ registerOurApp:
     // We have exhausted the Launch Services database without finding our
     // (possibly branded) BOINC Manager app, so add it to the dataabase
     printf("%s was not found in Launch Services database; registering it now\n", appPath[brandID]);
+    fflush(stdout);
     sprintf(cmd, "sudo -u #%d /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister \"%s\"", userID, appPath[brandID]);
     err = callPosixSpawn(cmd);
     if (err) {
@@ -1420,6 +1421,7 @@ static void LoadPreferredLanguages(){
             if (!BOINCTranslationAddCatalog(Catalogs_Dir, language, Catalog_Name)) {
                 REPORT_ERROR(true);
                 printf("could not load catalog for langage %s\n", language);
+                fflush(stdout);
             }
         }
     }
@@ -1569,7 +1571,7 @@ OSErr UpdateAllVisibleUsers(long brandID, long oldBrandID)
     Boolean             allNonAdminUsersAreSet = true;
     Boolean             allowNonAdminUsersToRunBOINC = false;
     int                 err;
-    Boolean             isAdminGroupMember, isBMGroupMember, isBPGroupMember;
+    Boolean             isAdminGroupMember, isBMGroupMember;
     struct stat         sbuf;
     char                cmd[256];
 #ifdef SANDBOX
@@ -1643,6 +1645,7 @@ OSErr UpdateAllVisibleUsers(long brandID, long oldBrandID)
                 }
             }
             printf("[1] Current Screensaver Selection for user %s is: \"%s\"\n", pw->pw_name, s);
+            fflush(stdout);
         }       // End if (isGroupMember)
     }           // End for (userIndex=0; userIndex< human_user_names.size(); ++userIndex)
     
@@ -1720,7 +1723,6 @@ OSErr UpdateAllVisibleUsers(long brandID, long oldBrandID)
 #ifdef SANDBOX
         isAdminGroupMember = false;
         isBMGroupMember = false;
-        isBPGroupMember = false;
 
         isAdminGroupMember = IsUserMemberOfGroup(pw->pw_name, admin_group_name);
         if (isAdminGroupMember) {
@@ -1767,9 +1769,7 @@ OSErr UpdateAllVisibleUsers(long brandID, long oldBrandID)
                 REPORT_ERROR(err);
                 printf("[2] %s returned %d\n", cmd, err);
                 fflush(stdout);
-                isBPGroupMember = true;
             } else {
-                isBPGroupMember = true;
                 for (i=1; i<BPGroupMembershipCount; ++i) {
                     sprintf(cmd, "dscl . -delete /groups/%s GroupMembership \"%s\"", boinc_project_group_name, pw->pw_name);
                     err = callPosixSpawn(cmd);
@@ -1814,9 +1814,10 @@ OSErr UpdateAllVisibleUsers(long brandID, long oldBrandID)
             printf("[2] calling SetLoginItemOSAScript for user %s, euid = %d, deleteLoginItem = %d\n", 
                 pw->pw_name, geteuid(), deleteLoginItem);
             fflush(stdout);
-           SetLoginItemOSAScript(brandID, deleteLoginItem, pw->pw_name);
+            SetLoginItemOSAScript(brandID, deleteLoginItem, pw->pw_name);
 
             printf("[2] calling FixLaunchServicesDataBase for user %s\n", pw->pw_name);
+            fflush(stdout);
             FixLaunchServicesDataBase(pw->pw_uid, brandID);
         } else {
             printf("[2] calling SetLoginItemLaunchAgent for user %s, euid = %d, deleteLoginItem = %d\n", 
@@ -2043,6 +2044,7 @@ static Boolean IsUserLoggedIn(const char *userName){
         if (PersistentFGets(s, sizeof(s), f) != NULL) {
             pclose (f);
             printf("User %s is currently logged in\n", userName);
+            fflush(stdout);
             return true; // this user is logged in (perhaps via fast user switching)
         }
         pclose (f);         
@@ -2176,6 +2178,87 @@ int TestRPCBind()
 }
 
 
+#ifdef __arm64__
+int check_rosetta2_installed() {
+    int prog;
+    const char * data_dir = "/Library/Application Support/BOINC Data";
+    char execpath[MAXPATHLEN];
+    int retval = 0;
+
+    // write the EMULATED_CPU_INFO into the BOINC data dir
+    // the executable should be in BOINC data dir
+    strncpy(execpath, data_dir, sizeof(execpath));
+    strncat(execpath, "/" EMULATED_CPU_INFO_EXECUTABLE, sizeof(execpath) - strlen(execpath) - 1);
+
+    int argc = 1;
+    char* const argv[2] = {
+         const_cast<char *>(execpath),
+         NULL
+    };
+
+    retval = run_program(
+        data_dir,
+        execpath,
+        argc,
+        argv,
+        0,
+        prog
+    );
+
+    if (retval) {
+         return retval;
+    }
+
+    retval = get_exit_status(prog);
+    if (retval) {
+        if (WIFEXITED(retval)) {
+            return (WEXITSTATUS(retval));
+        } else if (WIFSIGNALED(retval)) {
+            return (WTERMSIG(retval));
+        } else {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+
+int optionally_install_rosetta2() {
+    int err = 0;
+    int i = 0;
+    const char *cmd = "/usr/sbin/softwareupdate --install-rosetta --agree-to-license";
+    
+    Boolean answer = ShowMessage(true,
+        (char *)_("BOINC can run project applications written for intel Macs if Rosetta 2 is installed.\n\n"
+        "Do you want to install Rosetta 2 now?"
+        ));
+    printf("User answered %s to installing Rosetta 2\n", answer? "yes" : "no");
+    fflush(stdout);
+    if (answer) {
+        err = callPosixSpawn(cmd);
+        REPORT_ERROR(err);
+        printf("%s returned %d\n", cmd, err);
+        fflush(stdout);
+        if (err) return err;
+        
+        // Wait up to 20 seconds for system to install Rosetta 2.
+        // My tests seem to show that callPosixSpawn() does not return until after
+        // installaton of Rosetta 2 is complete, but do this anyway to be sure.
+        for (;;) {
+            err = check_rosetta2_installed();
+            if (err == 0) break;
+            if (++i > 20) break;
+            boinc_sleep(1);
+        }
+        printf("check_rosetta2_installed() returned %d after %d seconds.\n", err, i);
+        fflush(stdout);
+    }
+    return err;
+}
+#endif  // __arm64__
+
+
 pid_t FindProcessPID(char* name, pid_t thePID)
 {
     FILE *f;
@@ -2245,7 +2328,7 @@ static OSErr QuitAppleEventHandler( const AppleEvent *appleEvt, AppleEvent* repl
 #define IN_DOUBLE_QUOTED_TOKEN      2
 #define IN_UNQUOTED_TOKEN           3
 
-static int parse_posic_spawn_command_line(char* p, char** argv) {
+static int parse_posix_spawn_command_line(char* p, char** argv) {
     int state = NOT_IN_TOKEN;
     int argc=0;
 
@@ -2302,16 +2385,16 @@ int callPosixSpawn(const char *cmdline) {
     char progName[1024];
     char progPath[MAXPATHLEN];
     char* argv[100];
-    int argc = 0;
+    int argc __attribute__((unused)) = 0;
     char *p;
     pid_t thePid = 0;
     int result = 0;
     int status = 0;
     extern char **environ;
     
-    // Make a copy of cmdline because parse_posic_spawn_command_line modifies it
+    // Make a copy of cmdline because parse_posix_spawn_command_line modifies it
     strlcpy(command, cmdline, sizeof(command));
-    argc = parse_posic_spawn_command_line(const_cast<char*>(command), argv);
+    argc = parse_posix_spawn_command_line(const_cast<char*>(command), argv);
     strlcpy(progPath, argv[0], sizeof(progPath));
     strlcpy(progName, argv[0], sizeof(progName));
     p = strrchr(progName, '/');

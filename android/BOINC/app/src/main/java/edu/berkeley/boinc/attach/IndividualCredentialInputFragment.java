@@ -26,21 +26,17 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.CheckBox;
-
 import androidx.annotation.NonNull;
 import androidx.fragment.app.DialogFragment;
-
-import java.util.List;
-
 import edu.berkeley.boinc.attach.ProjectAttachService.ProjectAttachWrapper;
 import edu.berkeley.boinc.databinding.AttachProjectCredentialInputDialogBinding;
 import edu.berkeley.boinc.utils.Logging;
+import java.util.List;
 
 public class IndividualCredentialInputFragment extends DialogFragment {
     private String projectName;
@@ -79,9 +75,8 @@ public class IndividualCredentialInputFragment extends DialogFragment {
         binding.nameInput.setText(defaultValues.get(1));
 
         binding.loginButton.setOnClickListener(view -> {
-            if(Logging.DEBUG) {
-                Log.d(Logging.TAG, "IndividualCredentialInputFragment: login clicked");
-            }
+            Logging.logVerbose(Logging.Category.USER_ACTION, "IndividualCredentialInputFragment: login clicked");
+
             final String email = binding.emailInput.getText().toString();
             final String name = binding.nameInput.getText().toString();
             final String password = binding.pwdInput.getText().toString();
@@ -90,11 +85,10 @@ public class IndividualCredentialInputFragment extends DialogFragment {
         });
 
         binding.registerButton.setOnClickListener(view -> {
-            if(Logging.DEBUG) {
-                Log.d(Logging.TAG,
-                      "IndividualCredentialInputFragment: register clicked, client account creation disabled: " +
-                      project.getConfig().getClientAccountCreationDisabled());
-            }
+            Logging.logVerbose(Logging.Category.USER_ACTION,
+                    "IndividualCredentialInputFragment: register clicked, client account creation disabled: " +
+                    project.getConfig().getClientAccountCreationDisabled());
+
             if(project.getConfig().getClientAccountCreationDisabled()) {
                 // cannot register in client, open website
                 Intent i = new Intent(Intent.ACTION_VIEW);
@@ -111,9 +105,8 @@ public class IndividualCredentialInputFragment extends DialogFragment {
         });
 
         binding.forgotPwdButton.setOnClickListener(view -> {
-            if(Logging.DEBUG) {
-                Log.d(Logging.TAG, "IndividualCredentialInputFragment: forgot pwd clicked");
-            }
+            Logging.logVerbose(Logging.Category.USER_ACTION, "IndividualCredentialInputFragment: forgot pwd clicked");
+
             Intent i = new Intent(Intent.ACTION_VIEW);
             i.setData(Uri.parse(forgotPwdLink));
             startActivity(i);
@@ -145,9 +138,8 @@ public class IndividualCredentialInputFragment extends DialogFragment {
             mListener = (IndividualCredentialInputFragmentListener) context;
         }
         catch (ClassCastException e) {
-            if(Logging.ERROR) {
-                Log.e(Logging.TAG, "IndividualCredentialInputFragment.onAttach The activity doesn't implement the interface. Error: ", e);
-            }
+            Logging.logException(Logging.Category.GUI_ACTIVITY,
+                             "IndividualCredentialInputFragment.onAttach The activity doesn't implement the interface. Error: ", e);
         }
     }
 

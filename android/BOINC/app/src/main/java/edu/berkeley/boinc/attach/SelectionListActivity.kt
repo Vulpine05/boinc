@@ -26,14 +26,12 @@ import android.net.ConnectivityManager
 import android.os.Bundle
 import android.os.IBinder
 import android.os.RemoteException
-import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import edu.berkeley.boinc.BOINCActivity
 import edu.berkeley.boinc.BuildConfig
 import edu.berkeley.boinc.R
 import edu.berkeley.boinc.adapter.ProjectListEntry
@@ -61,9 +59,8 @@ class SelectionListActivity : AppCompatActivity() {
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "AttachProjectListActivity onCreate")
-        }
+        Logging.logVerbose(Logging.Category.GUI_VIEW, "AttachProjectListActivity onCreate")
+
         doBindService()
 
         // setup layout
@@ -72,9 +69,8 @@ class SelectionListActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        if (Logging.VERBOSE) {
-            Log.v(Logging.TAG, "AttachProjectListActivity onDestroy")
-        }
+        Logging.logVerbose(Logging.Category.GUI_VIEW, "AttachProjectListActivity onDestroy")
+
         doUnbindService()
         super.onDestroy()
     }
@@ -86,9 +82,8 @@ class SelectionListActivity : AppCompatActivity() {
         if (!checked) {
             val toast = Toast.makeText(applicationContext, R.string.attachproject_list_header, Toast.LENGTH_SHORT)
             toast.show()
-            if (Logging.DEBUG) {
-                Log.d(Logging.TAG, "AttachProjectListActivity no project selected, stop!")
-            }
+
+            Logging.logDebug(Logging.Category.GUI_VIEW, "AttachProjectListActivity no project selected, stop!")
         }
         return checked
     }
@@ -103,9 +98,8 @@ class SelectionListActivity : AppCompatActivity() {
         if (!online) {
             val toast = Toast.makeText(applicationContext, R.string.attachproject_list_no_internet, Toast.LENGTH_SHORT)
             toast.show()
-            if (Logging.DEBUG) {
-                Log.d(Logging.TAG, "AttachProjectListActivity not online, stop!")
-            }
+
+            Logging.logDebug(Logging.Category.GUI_VIEW, "AttachProjectListActivity not online, stop!")
         }
         return online
     }
@@ -124,9 +118,9 @@ class SelectionListActivity : AppCompatActivity() {
                 selectedProjectsDebug.append(tmp.info!!.name).append(",")
             }
         }
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "SelectionListActivity: selected projects: $selectedProjectsDebug")
-        }
+
+        Logging.logDebug(Logging.Category.GUI_VIEW, "SelectionListActivity: selected projects: $selectedProjectsDebug")
+
         attachService!!.setSelectedProjects(selected) // returns immediately
 
         // start credential input activity
@@ -134,13 +128,7 @@ class SelectionListActivity : AppCompatActivity() {
     }
 
     private fun onCancel() {
-        // go to projects screen and clear history
-        startActivity(Intent(this, BOINCActivity::class.java).apply {
-            // add flags to return to main activity and clearing all others and clear the back stack
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra("targetFragment", R.string.tab_projects) // make activity display projects fragment
-        })
+        finish()
     }
 
     override fun onBackPressed() {
@@ -212,21 +200,6 @@ class SelectionListActivity : AppCompatActivity() {
     private suspend fun updateProjectList() {
         retrieveProjectList() ?: return
 
-        // If AccountManager is already connected, user should not be able to connect more AMs
-        // Hide 'Add Account Manager' option
-        var statusAcctMgrPresent = false
-        try {
-            val statusAcctMgr = BOINCActivity.monitor!!.clientAcctMgrInfo
-            statusAcctMgrPresent = statusAcctMgr.isPresent
-        } catch (e: Exception) {
-            // data retrieval failed, continue...
-            if (Logging.ERROR) {
-                Log.d(Logging.TAG, "AcctMgrInfo data retrieval failed.")
-            }
-        }
-        if (!statusAcctMgrPresent) {
-            entries.add(ProjectListEntry()) // add account manager option to bottom of list
-        }
         binding.projectsRecyclerView.adapter = SelectionRecyclerViewAdapter(this, entries)
         binding.projectsRecyclerView.layoutManager = LinearLayoutManager(this)
     }
@@ -239,37 +212,44 @@ class SelectionListActivity : AppCompatActivity() {
             try {
                 data = monitor!!.attachableProjects
             } catch (e: RemoteException) {
-                if (Log.isLoggable(Logging.TAG, Log.WARN)) {
-                    Log.w(Logging.TAG, e)
-                }
+                Logging.logWarning(Logging.Category.MONITOR,
+                        "retrieveProjectList(): failed to get attachable projects: $e"
+                    )
             }
             if (!coroutineContext.isActive) {
                 return@withContext data // Does not matter if data == null or not
             }
             if (data == null) {
-                if (Logging.WARNING) {
-                    Log.w(Logging.TAG, "retrieveProjectList(): failed to retrieve data, retry....")
-                }
+                Logging.logWarning(Logging.Category.MONITOR, "retrieveProjectList(): failed to retrieve data, retry....")
+
                 delay(500)
             } else {
                 retry = false
             }
         }
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "monitor.getAttachableProjects returned with " + data!!.size + " elements")
-        }
-        // Clear current ProjectListEntries since we successfully have got new ProjectInfos
-        entries.clear()
-        // Transform ProjectInfos into ProjectListEntries
-        for (i in data!!.indices.reversed()) {
-            if (!coroutineContext.isActive) {
-                return@withContext data
-            }
-            entries.add(ProjectListEntry(data[i]))
-        }
 
-        // Sort ProjectListEntries off the UI thread
-        entries.sortWith(Comparator { e1, e2 -> e1.info!!.name.compareTo(e2.info!!.name, ignoreCase = true) })
+        Logging.logDebug(Logging.Category.MONITOR, "monitor.getAttachableProjects returned with ${data!!.size} elements")
+
+        @Suppress("SENSELESS_COMPARISON")
+        if (data != null) {
+            // Clear current ProjectListEntries since we successfully have got new ProjectInfos
+            entries.clear()
+            // Transform ProjectInfos into ProjectListEntries
+            for (i in data.indices.reversed()) {
+                if (!coroutineContext.isActive) {
+                    return@withContext data
+                }
+                entries.add(ProjectListEntry(data[i]))
+            }
+
+            // Sort ProjectListEntries off the UI thread
+            entries.sortWith(Comparator { e1, e2 ->
+                e1.info!!.name.compareTo(
+                    e2.info!!.name,
+                    ignoreCase = true
+                )
+            })
+        }
         return@withContext data
     }
 }

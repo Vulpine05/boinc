@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // https://boinc.berkeley.edu
-// Copyright (C) 2020 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -784,6 +784,7 @@ int FILE_TRANSFER::parse(XML_PARSER& xp) {
         if (xp.parse_double("next_request_time", next_request_time)) continue;
         if (xp.parse_int("status", status)) continue;
         if (xp.parse_double("time_so_far", time_so_far)) continue;
+        if (xp.parse_double("estimated_xfer_time_remaining", estimated_xfer_time_remaining)) continue;
         if (xp.parse_double("last_bytes_xferred", bytes_xferred)) continue;
         if (xp.parse_double("file_offset", file_offset)) continue;
         if (xp.parse_double("xfer_speed", xfer_speed)) continue;
@@ -809,6 +810,7 @@ void FILE_TRANSFER::clear() {
     next_request_time = 0;
     status = 0;
     time_so_far = 0;
+    estimated_xfer_time_remaining = 0;
     bytes_xferred = 0;
     file_offset = 0;
     xfer_speed = 0;
@@ -1449,7 +1451,7 @@ int RPC_CLIENT::exchange_versions(string client_name, VERSION_INFO& server) {
     char buf[256];
     RPC rpc(this);
 
-    sprintf(buf,
+    snprintf(buf, sizeof(buf),
         "<exchange_versions>\n"
         "   <major>%d</major>\n"
         "   <minor>%d</minor>\n"
@@ -1494,7 +1496,7 @@ int RPC_CLIENT::get_results(RESULTS& t, bool active_only) {
 
     t.clear();
 
-    sprintf(buf, "<get_results>\n<active_only>%d</active_only>\n</get_results>\n",
+    snprintf(buf, sizeof(buf), "<get_results>\n<active_only>%d</active_only>\n</get_results>\n",
         active_only?1:0
     );
     retval = rpc.do_rpc(buf);
@@ -1965,31 +1967,43 @@ int RPC_CLIENT::run_benchmarks() {
 // start or stop a graphics app on behalf of the screensaver.
 // (needed for Mac OS X 10.15+)
 //
-// <operaton can be "run", "runfullscreen" or "stop"
+// <operation can be "run", "runfullscreen" or "stop"
 // operand is slot number (for run or runfullscreen) or pid (for stop)
 // if slot = -1, start the default screensaver
 // screensaverLoginUser is the login name of the user running the screensaver
 //
-int RPC_CLIENT::run_graphics_app(const char *operation, int& operand, const char *screensaverLoginUser) {
+int RPC_CLIENT::run_graphics_app(
+    const char *operation, int& operand, const char *screensaverLoginUser
+) {
     char buf[256];
     SET_LOCALE sl;
     RPC rpc(this);
     int thePID = -1;
-    bool stop = false;
     bool test = false;
     
     snprintf(buf, sizeof(buf), "<run_graphics_app>\n");
     
     if (!strcmp(operation, "run")) {
-        snprintf(buf, sizeof(buf), "<run_graphics_app>\n<slot>%d</slot>\n<run/>\n<ScreensaverLoginUser>%s</ScreensaverLoginUser>\n", operand, screensaverLoginUser);
+        snprintf(buf, sizeof(buf),
+            "<run_graphics_app>\n<slot>%d</slot>\n<run/>\n<ScreensaverLoginUser>%s</ScreensaverLoginUser>\n",
+            operand, screensaverLoginUser
+        );
     } else if (!strcmp(operation, "runfullscreen")) {
-        snprintf(buf, sizeof(buf), "<run_graphics_app>\n<slot>%d</slot>\n<runfullscreen/>\n<ScreensaverLoginUser>%s</ScreensaverLoginUser>\n", operand, screensaverLoginUser);
+        snprintf(buf, sizeof(buf),
+            "<run_graphics_app>\n<slot>%d</slot>\n<runfullscreen/>\n<ScreensaverLoginUser>%s</ScreensaverLoginUser>\n",
+            operand, screensaverLoginUser
+        );
     } else if (!strcmp(operation, "stop")) {
-        snprintf(buf, sizeof(buf), "<run_graphics_app>\n<graphics_pid>%d</graphics_pid>\n<stop/>\n<ScreensaverLoginUser>%s</ScreensaverLoginUser>\n", operand, screensaverLoginUser);
-        stop = true;
-        } else if (!strcmp(operation, "test")) {
-            snprintf(buf, sizeof(buf), "<run_graphics_app>\n<graphics_pid>%d</graphics_pid>\n<test/>\n", operand);
-            test = true;
+        snprintf(buf, sizeof(buf),
+            "<run_graphics_app>\n<graphics_pid>%d</graphics_pid>\n<stop/>\n<ScreensaverLoginUser>%s</ScreensaverLoginUser>\n",
+            operand, screensaverLoginUser
+        );
+    } else if (!strcmp(operation, "test")) {
+        snprintf(buf, sizeof(buf),
+            "<run_graphics_app>\n<graphics_pid>%d</graphics_pid>\n<test/>\n",
+            operand
+        );
+        test = true;
     } else {
         operand = -1;
         return -1;
@@ -2223,6 +2237,17 @@ int RPC_CLIENT::set_host_info(HOST_INFO& h) {
     );
     buf[sizeof(buf)-1] = 0;
 
+    int retval = rpc.do_rpc(buf);
+    if (retval) return retval;
+    return rpc.parse_reply();
+}
+
+int RPC_CLIENT::reset_host_info() {
+    SET_LOCALE sl;
+    RPC rpc(this);
+    char buf[1024];
+
+    snprintf(buf, sizeof(buf), "<reset_host_info>\n</reset_host_info>\n");
     int retval = rpc.do_rpc(buf);
     if (retval) return retval;
     return rpc.parse_reply();

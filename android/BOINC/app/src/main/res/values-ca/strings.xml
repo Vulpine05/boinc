@@ -14,9 +14,7 @@
     <string name="attachproject_list_no_internet">No hi ha connexió a Internet</string>
     <!--credential input-->
     <string name="attachproject_credential_input_sing_desc">Entra la informació del teu compte:</string>
-    <string name="attachproject_credential_input_desc">Entra la informació del teu compte per els projectes
-        seleccionats:
-    </string>
+    <string name="attachproject_credential_input_desc">Entra la informació del teu compte per els projectes seleccionats:</string>
     <string name="attachproject_credential_input_show_pwd">Mostra la contrasenya</string>
     <string name="attachproject_individual_credential_input">Afegir els projectes individualment:</string>
     <!--conflicts-->
@@ -25,9 +23,7 @@
     <string name="attachproject_conflict_not_unique">El compte ja existeix amb un altre contrasenya</string>
     <string name="attachproject_conflict_bad_password">Contrasenya incorrecte</string>
     <string name="attachproject_conflict_unknown_user">El compte no existeix</string>
-    <string name="attachproject_conflict_unknown_user_creation_disabled">El compte no existeix, vista la pàgina web del
-        projecte per registrar-te-hi
-    </string>
+    <string name="attachproject_conflict_unknown_user_creation_disabled">El compte no existeix, vista la pàgina web del projecte per registrar-te-hi</string>
     <!--working-->
     <string name="attachproject_working_attaching">Adjuntant %1$s</string>
     <!--e.g. Attaching Einstein@Home-->
@@ -36,15 +32,13 @@
     <!--e.g. Hint 1/2-->
     <string name="attachproject_hint_contribtion_header">Com contribuir:</string>
     <string name="attachproject_hint_contribtion_wifi">1. Connectar a una xarxa WiFi</string>
-    <string name="attachproject_hint_contribtion_charger">2, Connectar el carregador</string>
-    <string name="attachproject_hint_contribtion_screen">3. Desactivar la Pantalla</string>
+    <string name="attachproject_hint_contribtion_charger">2. Connectar el carregador</string>
+    <string name="attachproject_hint_contribtion_screen">4. Desactivar la Pantalla</string>
     <string name="attachproject_hint_projectwebsite_header">Visita els llocs web dels projectes a:</string>
     <string name="attachproject_hint_projectwebsite_science">Apren més sobre la ciència</string>
     <string name="attachproject_hint_projectwebsite_stats">Veure les estadístiques de les contibucions</string>
     <string name="attachproject_hint_projectwebsite_community">Posat en contacte amb altres voluntaris</string>
-    <string name="attachproject_hint_platforms_header">BOINC també està disponible per al teu ordinador o portàtil,
-        visita boinc.berkeley.edu per aprendre més.
-    </string>
+    <string name="attachproject_hint_platforms_header">BOINC també està disponible per al teu ordinador o portàtil, visita boinc.berkeley.edu per aprendre més.</string>
     <!--project login-->
     <string name="attachproject_login_loading">Connectant amb el servidor del projecte...</string>
     <string name="attachproject_login_header_general_area">Zona general:</string>
@@ -59,10 +53,8 @@
     <string name="attachproject_login_button_login">Registre\'t</string>
     <string name="attachproject_login_button_forgotpw">He oblidat la contrasenya</string>
     <!--account manager-->
-    <string name="attachproject_acctmgr_list_desc">Utilitza l\'administrador de comptes de BOINC per afegir i gestionar
-        múltiples projectes
-    </string>
-    <string name="attachproject_acctmgr_header">Afegir gestor de comptes</string>
+    <string name="attachproject_acctmgr_list_desc">Utilitza l\'administrador de comptes de BOINC per afegir i gestionar múltiples projectes</string>
+    <string name="attachproject_acctmgr_header">Utilitzar l\'administrador de comptes</string>
     <string name="attachproject_acctmgr_header_url">URL</string>
     <string name="attachproject_acctmgr_header_name">Usuari:</string>
     <string name="attachproject_acctmgr_header_pwd">Contrasenya:</string>
@@ -80,8 +72,7 @@
     <string name="attachproject_error_project_down">El projecte està desconnectat</string>
     <string name="attachproject_error_email_bad_syntax">Adreça de correu electrònic rebutjada</string>
     <string name="attachproject_error_bad_pwd">Contrasenya rebutjada</string>
-    <string name="attachproject_error_creation_disabled">La creació de comptes està desactivada en aquest projecte
-    </string>
+    <string name="attachproject_error_creation_disabled">La creació de comptes està desactivada en aquest projecte</string>
     <string name="attachproject_error_invalid_url">URL incorrecte</string>
     <!--tab names-->
     <string name="tab_status">Estatus</string>
@@ -98,8 +89,7 @@
     <string name="status_idle">Res a fer</string>
     <string name="status_idle_long">Esperant feines...</string>
     <string name="status_computing_disabled">Suspès</string>
-    <string name="status_computing_disabled_long">Premeu play per reprendre la connexió per xarxa i la computació.
-    </string>
+    <string name="status_computing_disabled_long">Premeu play per reprendre la connexió per xarxa i la computació.</string>
     <string name="status_launching">S\'està iniciant...</string>
     <string name="status_noproject">Tria un projecte per participar-hi.</string>
     <string name="status_benchmarking">Executamt proves...</string>
@@ -111,55 +101,36 @@
     <string name="prefs_category_cpu">CPU</string>
     <string name="prefs_category_storage">Emmagatzematge</string>
     <string name="prefs_category_memory">Memòria</string>
+    <string name="prefs_category_other">Un altre</string>
     <string name="prefs_category_debug">Depura</string>
     <string name="prefs_show_advanced_header">Mostra les preferències i controls avançats...</string>
     <string name="prefs_suspend_when_screen_on">Atura el càlcul quan la pantalla estigui activa</string>
     <string name="prefs_stationary_device_mode_header">Mode de dispositiu fix</string>
-    <string name="prefs_stationary_device_mode_description">Permet el càlcul independentment de les preferències
-        d\'alimentació. Només activar-ho si el dispositiu no té una bateria.
-    </string>
+    <string name="prefs_stationary_device_mode_description">Permet el càlcul independentment de les preferències d\'alimentació. Només activar-ho si el dispositiu no té una bateria.</string>
     <string name="prefs_power_source_header">Fonts d\'alimentació per al càlcul</string>
-    <string name="prefs_power_source_description">Selecciona les fonts d\'energia que BOINC pot utilitzar per al
-        càlcul.
-    </string>
     <string name="prefs_power_source_ac">Endoll</string>
     <string name="prefs_power_source_usb">Connexió USB</string>
     <string name="prefs_power_source_wireless">Carregador sense fils</string>
     <string name="prefs_power_source_battery">Bateria</string>
     <string name="battery_charge_min_pct_header">Nivell mínim de la bateria</string>
-    <string name="battery_charge_min_pct_description">BOINC atura la computació si el nivell de càrrega de la bateria
-        per sota del definit.
-    </string>
     <string name="battery_temperature_max_header">Temperatura màxima de la bateria</string>
-    <string name="battery_temperature_max_description">BOINC atura la computació si la temperatura de la bateria està
-        per sobre del valor definit. No es recomanable canviar aquest valor.
-    </string>
     <string name="prefs_disk_max_pct_header">Màxim espai d\'emmagatzematge utilitzat</string>
     <string name="prefs_disk_min_free_gb_header">Espai mínim d\'emmagatzematge</string>
     <string name="prefs_disk_access_interval_header">Període d\'accés</string>
-    <string name="prefs_disk_access_interval_description">Suggereix un interval entre accessos al disc</string>
     <string name="prefs_network_daily_xfer_limit_mb_header">Límit de transferència diària</string>
     <string name="prefs_network_wifi_only_header">Transferir tasques només amb WiFi</string>
     <string name="prefs_autostart_header">Inici automàtic</string>
     <string name="prefs_show_notification_notices_header">Mostra una notificació per a nous avisos</string>
-    <string name="prefs_show_notification_suspended_header">Mostra una notificació quan es suspengui</string>
     <string name="prefs_cpu_number_cpus_header">Nuclis de CPU usats</string>
-    <string name="prefs_cpu_number_cpus_description">Limita el nombre de nuclis de CPU que BOINC utilitza per la
-        computació.
-    </string>
+    <string name="prefs_cpu_number_cpus_description">Limita el nombre de nuclis de CPU que BOINC utilitza per la computació.</string>
     <string name="prefs_cpu_other_load_suspension_header">Pausa en l\'ús de la CPU per sobre de</string>
-    <string name="prefs_cpu_other_load_suspension_description">Determina quan BOINC pausa el còmput degut a l\'ús de la
-        CPU per altres aplicacions.
-    </string>
+    <string name="prefs_cpu_other_load_suspension_description">Determina quan BOINC pausa el còmput degut a l\'ús de la CPU per altres aplicacions.</string>
     <string name="prefs_cpu_time_max_header">Límit de CPU</string>
     <string name="prefs_cpu_time_max_description">Limita el temps de CPU que BOINC utilitza per la computació.</string>
     <string name="prefs_memory_max_idle_header">RAM límit</string>
-    <string name="prefs_memory_max_idle_description">Limita la quantitat de RAM que les tasques poden utilitzar.
-    </string>
     <string name="prefs_client_log_flags_header">Marques de registre del client de BOINC</string>
     <string name="prefs_gui_log_level_header">Nivell de registre GUI</string>
-    <string name="prefs_gui_log_level_description">Especifica el nivell de detall dels missatges de registre GUI.
-    </string>
+    <string name="prefs_gui_log_level_description">Especifica el nivell de detall dels missatges de registre GUI.</string>
     <!--projects tab strings-->
     <string name="projects_add">Afegeix el projecte</string>
     <string name="projects_icon">Icona delprojecte</string>
@@ -224,11 +195,11 @@
     <!--transfers tab strings-->
     <string name="trans_upload">Puja</string>
     <string name="trans_download">Descarrega</string>
+    <string name="trans_failed">ha fallat</string>
     <string name="trans_retry_in">re intentar en %1$s</string>
     <string name="trans_suspended">suspès</string>
     <string name="trans_active">activa</string>
     <string name="trans_pending">pendent</string>
-    <string name="trans_header_name">Fitxer:</string>
     <string name="trans_control_retry">Re-intenta transferències</string>
     <!--notices tab strings-->
     <!--eventlog tab strings-->
@@ -252,8 +223,7 @@
     <string name="suspend_os">Suspès per Android.</string>
     <string name="suspend_wifi">No hi ha connexió Wifi.</string>
     <string name="suspend_battery_charging">Esperant a la càrrega de la bateria.</string>
-    <string name="suspend_battery_charging_long">La computació continuarà quan la bateria tingui una carregada del
-    </string>
+    <string name="suspend_battery_charging_long">La computació continuarà quan la bateria tingui una carregada del</string>
     <string name="suspend_battery_overheating">Esperant que es refredi la bateria</string>
     <string name="suspend_user_req">Continuant la computació...</string>
     <!--rpc reasons-->
@@ -270,21 +240,18 @@
     <string name="menu_emailto">Envia per correu electrònic</string>
     <string name="menu_copy">Copia al porta-retalls</string>
     <string name="menu_eventlog">Registre d\'esdeveniments</string>
-    <string name="menu_exit">Surt de BOINC</string>
     <string name="menu_run_mode_disable">Suspèn</string>
     <string name="menu_run_mode_enable">Reprèn</string>
     <string name="menu_about">Sobre</string>
     <string name="menu_help">Ajuda</string>
+    <string name="menu_report_issue">Informa d\'un problema</string>
     <!--about dialog-->
     <string name="about_button">Retorna</string>
     <string name="about_title">Sobre</string>
     <string name="about_name">BOINC</string>
     <string name="about_version">Versió %1$s</string>
-    <string name="about_name_long">Berkeley Open Infrastructure for Network Computing</string>
     <string name="about_copyright_reserved">Reservats tots els drets.</string>
-    <string name="about_credits">Gràcies a l\'Institut Max Planck de Física Gravitacional, IBM Corporation i HTC
-        Corporation pel seu suport.
-    </string>
+    <string name="about_credits">Gràcies a l\'Institut Max Planck de Física Gravitacional, IBM Corporation i HTC Corporation pel seu suport.</string>
     <!--notice notification e.g. New notice from SETI@HOME OR 3 new notices-->
     <plurals name="notice_notification">
         <item quantity="one">Nou avís de %1$s</item>
@@ -292,20 +259,17 @@
     </plurals>
     <!--multi BOINC compatibility-->
     <string name="nonexcl_dialog_header">Aplicació de computació voluntària detectada</string>
-    <string name="nonexcl_dialog_text">Una altra aplicació de computació voluntària s\'està executant en aquest
-        dispositiu. Només una pot executar-se alhora.
-    </string>
+    <string name="nonexcl_dialog_text">Una altra aplicació de computació voluntària s\'està executant en aquest dispositiu. Només una pot executar-se alhora.</string>
     <string name="nonexcl_dialog_exit">Sortir</string>
     <!--social integration-->
     <string name="social_invite_button">Convida als teus amics</string>
     <string name="social_invite_intent_title">Com vols compartir?</string>
     <string name="social_invite_content_title">Estic fent ciència en el meu telèfon!</string>
-    <string name="social_invite_content_body">Estic usant el meu %1$s per fer computació per a la ciència. Tu també pots
-        fer-ho! Descarrega l\'aplicació des de: %2$s
-    </string>
+    <string name="social_invite_content_body">Estic usant el meu %1$s per fer computació per a la ciència. Tu també pots fer-ho! Descarrega l\'aplicació des de: %2$s</string>
     <!--first parameter: device manufacturer, second: URL-->
-    <string name="social_invite_content_url_google">https://play.google.com/store/apps/details?id=edu.berkeley.boinc
-    </string>
-    <string name="social_invite_content_url_amazon">http://www.amazon.com/gp/mas/dl/android?p=edu.berkeley.boinc
-    </string>
+    <string name="social_invite_content_url_google">https://play.google.com/store/apps/details?id=edu.berkeley.boinc</string>
+    <string name="social_invite_content_url_amazon">http://www.amazon.com/gp/mas/dl/android?p=edu.berkeley.boinc</string>
+    <!--Notification channels-->
+    <string name="main_notification_channel_name">BOINC</string>
+    <string name="notice_notification_channel_name">Notícies</string>
 </resources>

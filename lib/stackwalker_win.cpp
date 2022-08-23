@@ -10,7 +10,7 @@
  *		Stackwalker.cpp
  *
  *	Remarks:
- *    Dumps the stack of an thread if an exepction occurs
+ *    Dumps the stack of an thread if an exception occurs
  *
  *	Author:
  *		Jochen Kalmbach, Germany
@@ -290,7 +290,7 @@ BOOL CALLBACK SymEnumerateModulesProc64(LPCSTR /* ModuleName */, DWORD64 BaseOfD
                     );                }
 
                 // Company Name.
-                sprintf(szQuery, "\\StringFileInfo\\%04x%04x\\CompanyName",
+                snprintf(szQuery, sizeof(szQuery), "\\StringFileInfo\\%04x%04x\\CompanyName",
                     lpTranslate[0].wLanguage,
                     lpTranslate[0].wCodePage
                 );
@@ -304,7 +304,7 @@ BOOL CALLBACK SymEnumerateModulesProc64(LPCSTR /* ModuleName */, DWORD64 BaseOfD
                 }
 
                 // Product Name.
-                sprintf(szQuery, "\\StringFileInfo\\%04x%04x\\ProductName",
+                snprintf(szQuery, sizeof(szQuery), "\\StringFileInfo\\%04x%04x\\ProductName",
                     lpTranslate[0].wLanguage,
                     lpTranslate[0].wCodePage
                 );
@@ -318,7 +318,7 @@ BOOL CALLBACK SymEnumerateModulesProc64(LPCSTR /* ModuleName */, DWORD64 BaseOfD
                 }
 
                 // File Version.
-                sprintf(szQuery, "\\StringFileInfo\\%04x%04x\\FileVersion",
+                snprintf(szQuery, sizeof(szQuery), "\\StringFileInfo\\%04x%04x\\FileVersion",
                     lpTranslate[0].wLanguage,
                     lpTranslate[0].wCodePage
                 );
@@ -330,7 +330,7 @@ BOOL CALLBACK SymEnumerateModulesProc64(LPCSTR /* ModuleName */, DWORD64 BaseOfD
                 }
 
                 // Product Version.
-                sprintf(szQuery, "\\StringFileInfo\\%04x%04x\\ProductVersion",
+                snprintf(szQuery, sizeof(szQuery), "\\StringFileInfo\\%04x%04x\\ProductVersion",
                     lpTranslate[0].wLanguage,
                     lpTranslate[0].wCodePage
                 );
@@ -657,7 +657,7 @@ int DebuggerDisplayDiagnostics()
 // #################################################################################
 // Here the Stackwalk-Part begins.
 //   Some of the code is from an example from a book 
-//   But I couldn´t find the reference anymore... sorry...
+//   But I couldn't find the reference anymore... sorry...
 //   If someone knowns, please let me know...
 // #################################################################################
 // #################################################################################

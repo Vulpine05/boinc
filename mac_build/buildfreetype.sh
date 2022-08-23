@@ -2,7 +2,7 @@
 
 # This file is part of BOINC.
 # http://boinc.berkeley.edu
-# Copyright (C) 2020 University of California
+# Copyright (C) 2022 University of California
 #
 # BOINC is free software; you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License
@@ -31,7 +31,10 @@
 # Updated 1/5/16 for FreeType-2.6.2
 # Updated 1/25/18 for any version of FreeType (changed only comments)
 # Updated 1/23/19 use libc++ instead of libstdc++ for Xcode 10 compatibility
-# Updated 8/22/20 TO build Apple Silicon / arm64 and x86_64 Universal binary
+# Updated 8/22/20 to build Apple Silicon / arm64 and x86_64 Universal binary
+# Updated 5/18/21 for compatibility with zsh
+# Updated 10/18/21 for for building freetype 2.11.0
+# Updated 7/13/22 specify to build freetype without brotli support
 #
 ## This script requires OS 10.8 or later
 #
@@ -97,23 +100,23 @@ fi
 GCC_can_build_x86_64="no"
 GCC_can_build_arm64="no"
 GCC_archs=`lipo -info "${GCCPATH}"`
-if [[ "${GCC_archs}" == *"x86_64"* ]]; then GCC_can_build_x86_64="yes"; fi
-if [[ "${GCC_archs}" == *"arm64"* ]]; then GCC_can_build_arm64="yes"; fi
+if [[ "${GCC_archs}" = *"x86_64"* ]]; then GCC_can_build_x86_64="yes"; fi
+if [[ "${GCC_archs}" = *"arm64"* ]]; then GCC_can_build_arm64="yes"; fi
 
 if [ "${doclean}" != "yes" ]; then
     if [ -f "${libPath}/libfreetype.a" ]; then
         alreadyBuilt=1
 
-        if [ $GCC_can_build_x86_64 == "yes" ]; then
+        if [ $GCC_can_build_x86_64 = "yes" ]; then
             lipo "${libPath}/libfreetype.a" -verify_arch x86_64
             if [ $? -ne 0 ]; then alreadyBuilt=0; doclean="yes"; fi
         fi
-        
-        if [ $alreadyBuilt -eq 1 ] && [ $GCC_can_build_arm64 == "yes" ]; then
+
+        if [ $alreadyBuilt -eq 1 ] && [ $GCC_can_build_arm64 = "yes" ]; then
             lipo "${libPath}/libfreetype.a" -verify_arch arm64
             if [ $? -ne 0 ]; then alreadyBuilt=0; doclean="yes"; fi
         fi
-        
+
         if [ $alreadyBuilt -eq 1 ]; then
             cwd=$(pwd)
             dirname=${cwd##*/}
@@ -153,18 +156,25 @@ SDKPATH=`xcodebuild -version -sdk macosx Path`
 rm -fR "../freetype_install/"
 
 # Build for x86_64 architecture
+
+## The "-Werror=unguarded-availability" compiler flag generates an error if
+## there is an unguarded API not available in our Deployment Target. This
+## helps ensure FreeType won't try to use unavailable APIs on older Mac
+## systems supported by BOINC.
+## It also causes configure to reject any such APIs for which it tests.
+##
 export CC="${GCCPATH}";export CXX="${GPPPATH}"
 export LDFLAGS="-Wl,-syslibroot,${SDKPATH},-arch,x86_64"
-export CPPFLAGS="-isysroot ${SDKPATH} -arch x86_64 -stdlib=libc++ -DMAC_OS_X_VERSION_MAX_ALLOWED=1070 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070"
-export CXXFLAGS="-isysroot ${SDKPATH} -arch x86_64 -stdlib=libc++ -DMAC_OS_X_VERSION_MAX_ALLOWED=1070 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070"
-export CFLAGS="-isysroot ${SDKPATH} -arch x86_64 -DMAC_OS_X_VERSION_MAX_ALLOWED=1070 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070"
+export CPPFLAGS="-isysroot ${SDKPATH} -Werror=unguarded-availability -arch x86_64 -mmacosx-version-min=10.10 -stdlib=libc++ -DMAC_OS_X_VERSION_MAX_ALLOWED=101000 -DMAC_OS_X_VERSION_MIN_REQUIRED=101000"
+export CXXFLAGS="-isysroot ${SDKPATH} -Werror=unguarded-availability -arch x86_64 -mmacosx-version-min=10.10 -stdlib=libc++ -DMAC_OS_X_VERSION_MAX_ALLOWED=101000 -DMAC_OS_X_VERSION_MIN_REQUIRED=101000"
+export CFLAGS="-isysroot ${SDKPATH} -Werror=unguarded-availability -arch x86_64 -mmacosx-version-min=10.10 -DMAC_OS_X_VERSION_MAX_ALLOWED=101000 -DMAC_OS_X_VERSION_MIN_REQUIRED=101000"
 export SDKROOT="${SDKPATH}"
-export MACOSX_DEPLOYMENT_TARGET=10.7
+export MACOSX_DEPLOYMENT_TARGET=10.10
 
-./configure --enable-shared=NO --prefix=${lprefix} --without-png --host=x86_64
+./configure --enable-shared=NO --prefix=${lprefix} --enable-freetype-config --without-png --without-brotli --host=x86_64
 if [ $? -ne 0 ]; then return 1; fi
 
-if [ "${doclean}" == "yes" ]; then
+if [ "${doclean}" = "yes" ]; then
     make clean
 fi
 
@@ -173,17 +183,17 @@ if [ $? -ne 0 ]; then return 1; fi
 
 # Now see if we can build for arm64
 # Note: Some versions of Xcode 12 don't support building for arm64
-if [ $GCC_can_build_arm64 == "yes" ]; then
+if [ $GCC_can_build_arm64 = "yes" ]; then
 
     export CC="${GCCPATH}";export CXX="${GPPPATH}"
     export LDFLAGS="-Wl,-syslibroot,${SDKPATH},-arch,arm64"
-    export CPPFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7 -stdlib=libc++ -DMAC_OS_X_VERSION_MAX_ALLOWED=1070 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070"
-    export CXXFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7 -stdlib=libc++ -DMAC_OS_X_VERSION_MAX_ALLOWED=1070 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070"
-    export CFLAGS="-isysroot ${SDKPATH} -target arm64-apple-macos10.7 -DMAC_OS_X_VERSION_MAX_ALLOWED=1070 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070"
+    export CPPFLAGS="-isysroot ${SDKPATH} -Werror=unguarded-availability -target arm64-apple-macos -mmacosx-version-min=10.10 -stdlib=libc++ -DMAC_OS_X_VERSION_MAX_ALLOWED=101000 -DMAC_OS_X_VERSION_MIN_REQUIRED=101000"
+    export CXXFLAGS="-isysroot ${SDKPATH} -Werror=unguarded-availability -target arm64-apple-macos -mmacosx-version-min=10.10 -stdlib=libc++ -DMAC_OS_X_VERSION_MAX_ALLOWED=101000 -DMAC_OS_X_VERSION_MIN_REQUIRED=101000"
+    export CFLAGS="-isysroot ${SDKPATH} -Werror=unguarded-availability -mmacosx-version-min=10.10 -target arm64-apple-macos -DMAC_OS_X_VERSION_MAX_ALLOWED=101000 -DMAC_OS_X_VERSION_MIN_REQUIRED=101000"
     export SDKROOT="${SDKPATH}"
-    export MACOSX_DEPLOYMENT_TARGET=10.7
+    export MACOSX_DEPLOYMENT_TARGET=10.10
 
-    ./configure --enable-shared=NO --prefix=${lprefix} --without-png --host=arm
+    ./configure --enable-shared=NO --prefix=${lprefix} --enable-freetype-config --without-png --without-brotli --host=arm
     if [ $? -ne 0 ]; then
         echo "              ******"
         echo "Freetype: x86_64 build succeeded but could not build for arm64."
@@ -197,7 +207,7 @@ if [ $GCC_can_build_arm64 == "yes" ]; then
         make clean 1>$stdout_target
 
         make 1>$stdout_target
-        if [ $? -ne 0 ]; then 
+        if [ $? -ne 0 ]; then
             rm -f objs/.libs/libfreetype_x86_64.a
             return 1
         fi

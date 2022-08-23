@@ -2,7 +2,7 @@
 
 # This file is part of BOINC.
 # http://boinc.berkeley.edu
-# Copyright (C) 2020 University of California
+# Copyright (C) 2022 University of California
 #
 # BOINC is free software; you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License
@@ -53,6 +53,11 @@
 ## Updated 7/29/20 by Charlie Fenton to build arm64 and x86_64 Universal2 Binary
 ## Updated 11/22/20 by Charlie Fenton to build DMG bare-core (apple-darwin) release
 ## Updated 11/26/20 by Charlie Fenton to let installer show message if MacOS too old
+## Updated 5/27/21 to support zsh & detecting X86_64 features emulated by Rosetta 2
+## Updated 6/24/21 allow installing BOINC on arm64 Macs without Rosetta 2 installed
+## Updated 10/10/21 to eliminate ca-bundle.crt
+## Updated 4/29/22 to eliminate obsolete clientscr/BOINCSaver_MacOS10_6_7.zip
+## Updated 6/9/22 to eliminate harmless error message
 ##
 ## NOTE: This script requires Mac OS 10.7 or later, and uses XCode developer
 ##   tools.  So you must have installed XCode Developer Tools on the Mac 
@@ -151,6 +156,11 @@
 ## - for more information:
 ##  $ xcrun altool --help
 ##  $ man stapler
+##
+## TODO: Add code to optionally automate notarization either in this script or
+## TODO: in a separate script. Perhaps adapt notarization and stapler code from 
+## TODO: <https://github.com/smittytone/scripts/blob/master/packcli.zsh>
+##
 
 if [ $# -lt 3 ]; then
 echo "Usage:"
@@ -192,11 +202,11 @@ lipo "BOINCManager.app/Contents/MacOS/BOINCManager" -verify_arch x86_64
 if [ $? -eq 0 ]; then Products_Have_x86_64="yes"; fi
 lipo "BOINCManager.app/Contents/MacOS/BOINCManager" -verify_arch arm64
 if [ $? -eq 0 ]; then Products_Have_arm64="yes"; fi
-if [ $Products_Have_x86_64 == "no" ] && [ $Products_Have_arm64 == "no" ]; then
+if [ $Products_Have_x86_64 = "no" ] && [ $Products_Have_arm64 = "no" ]; then
     echo "ERROR: could not determine architecture of BOINC Manager"
 fi
-if [ $Products_Have_arm64 == "yes" ]; then
-    if [ $Products_Have_x86_64 == "yes" ]; then
+if [ $Products_Have_arm64 = "yes" ]; then
+    if [ $Products_Have_x86_64 = "yes" ]; then
         arch="universal"
     else
         arch="arm64"
@@ -241,6 +251,21 @@ cp -fp mac_installer/myDistribution ../BOINC_Installer/Installer\ templates
 sed -i "" s/"<VER_NUM>"/"$1.$2.$3"/g ../BOINC_Installer/Installer\ Resources/ReadMe.rtf
 sed -i "" s/"x.y.z"/"$1.$2.$3"/g ../BOINC_Installer/Installer\ templates/myDistribution
 
+# Fix hostArchitectures option
+has_x86_64="no"
+has_arm64="no"
+client_archs=`lipo -info "${BUILDPATH}/boinc"`
+if [[ "${client_archs}" = *"x86_64"* ]]; then has_x86_64="yes"; fi
+if [[ "${client_archs}" = *"arm64"* ]]; then has_arm64="yes"; fi
+
+if [ $has_x86_64 = "no" ]; then
+    sed -i "" s/"x86_64,arm64"/"arm64"/g ../BOINC_Installer/Installer\ templates/myDistribution
+else
+    if [ $has_arm64 = "no" ]; then
+        sed -i "" s/"x86_64,arm64"/"x86_64"/g ../BOINC_Installer/Installer\ templates/myDistribution
+    fi
+fi
+
 ## Add a statement in the ReadMe telling Minimum required MacOS version, if known
 OSVersion=`/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "${BUILDPATH}/BOINCManager.app/Contents/Info.plist"`
 if [ $? -eq 0 ]; then 
@@ -284,26 +309,17 @@ cd "${BOINCPath}/clientgui/skins"
 cp -fpRL Default ../../../BOINC_Installer/Pkg_Root/Library/Application\ Support/BOINC\ Data/skins/
 cd "${BOINCPath}"
 
-cp -fp curl/ca-bundle.crt ../BOINC_Installer/Pkg_Root/Library/Application\ Support/BOINC\ Data/
-
 cp -fp win_build/installerv2/redist/all_projects_list.xml ../BOINC_Installer/Pkg_Root/Library/Application\ Support/BOINC\ Data/installer_projects_list.xml
 
 cp -fp clientscr/res/boinc_logo_black.jpg ../BOINC_Installer/Pkg_Root/Library/Application\ Support/BOINC\ Data/
 cp -fp api/ttf/liberation-fonts-ttf-2.00.0/LiberationSans-Regular.ttf ../BOINC_Installer/Pkg_Root/Library/Application\ Support/BOINC\ Data/LiberationSans-Regular.ttf
 cp -fp clientscr/ss_config.xml ../BOINC_Installer/Pkg_Root/Library/Application\ Support/BOINC\ Data/
 cp -fpRL "${BUILDPATH}/boincscr" ../BOINC_Installer/Pkg_Root/Library/Application\ Support/BOINC\ Data/
+cp -fpRL "${BUILDPATH}/detect_rosetta_cpu" ../BOINC_Installer/Pkg_Root/Library/Application\ Support/BOINC\ Data/
 
 cp -fpRL "${BUILDPATH}/BOINCManager.app" ../BOINC_Installer/Pkg_Root/Applications/
 
-## OS 10.6 and OS10.7 require screensavers built with Garbage Collection, but Xcode 5.0.2
-## was the last version of Xcode which supported building with Garbage Collection, so we
-## have saved the screensaver executable with GC as a binary. Add it to the screen saver
-## passed to the BOINC installer. At install time, he BOINC installer will select the
-## correct binary for the version of OS X and delete the other one. This script assumes
-## that $BUILDPATH/BOINCSaver.saver was built to use Automatic Reference Counting (ARC)
-## and not built to use GC.
 cp -fpRL "${BUILDPATH}/BOINCSaver.saver" ../BOINC_Installer/Pkg_Root/Library/Screen\ Savers/
-ditto -xk ./clientscr/BOINCSaver_MacOS10_6_7.zip ../BOINC_Installer/Pkg_Root/Library/Screen\ Savers/BOINCSaver.saver/Contents/MacOS
 
 ## Copy the localization files into the installer tree
 ## Old way copies CVS and *.po files which are not needed
@@ -397,8 +413,8 @@ if [ -e "${HOME}/BOINCCodeSignIdentities.txt" ]; then
     # Code Sign the boincscr graphics app if we have a signing identity
     sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/Pkg_Root/Library/Application Support/BOINC Data/boincscr"
 
-    # Code Sign the BOINC screensaver code for OS 10.6 and OS 10.7 if we have a signing identity
-    sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/Pkg_Root/Library/Screen Savers/BOINCSaver.saver/Contents/MacOS/BOINCSaver_MacOS10_6_7"
+    # Code Sign the detect_rosetta_cpu helper app if we have a signing identity
+    sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/Pkg_Root/Library/Application Support/BOINC Data/detect_rosetta_cpu"
 
     # Code Sign the gfx_switcher utility embedded in BOINC screensaver if we have a signing identity
     sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/Pkg_Root/Library/Screen Savers/BOINCSaver.saver/Contents/Resources/gfx_switcher"
@@ -510,7 +526,7 @@ sudo chmod -R 644 ../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-a
 mkdir -p ../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir
 cp -fpRL "${BUILDPATH}/boinc" ../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/
 cp -fpRL "${BUILDPATH}/boinccmd" ../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/
-cp -fpRL curl/ca-bundle.crt ../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/
+cp -fpRL "${BUILDPATH}/detect_rosetta_cpu" ../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/
 
 mkdir -p ../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/switcher
 cp -fpRL "${BUILDPATH}/switcher" ../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/switcher/
@@ -534,34 +550,37 @@ if [ -n "${APPSIGNINGIDENTITY}" ]; then
     # Code Sign the stand-alone bare core boinc client if we have a signing identity
     sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinc"
 
+    # Code Sign detect_rosetta_cpu for the stand-alone boinc client if we have a signing identity
+    sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/detect_rosetta_cpu"
+
     # Code Sign setprojectgrp for the stand-alone boinc client if we have a signing identity
     sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/switcher/setprojectgrp"
 
     # Code Sign switcher for the stand-alone boinc client if we have a signing identity
     sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/switcher/switcher"
 
-    if [ $arch == "universal" ]; then
-    # Workaround for code signing problem under Xcode 12.2:
-    # Code sign each architecture separately then combine into a uiversal binary
-    lipo "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd" -thin x86_64 -output "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-x86_64"
+    if [ $arch = "universal" ]; then
+        # Workaround for code signing problem under Xcode 12.2:
+        # Code sign each architecture separately then combine into a uiversal binary
+        lipo "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd" -thin x86_64 -output "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-x86_64"
 
-    lipo "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd" -thin arm64 -output "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-arm64"
+        lipo "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd" -thin arm64 -output "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-arm64"
 
-     sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-x86_64"
+        sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-x86_64"
 
-     sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-arm64"
-     
-     rm -f "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd" 
-     
-     lipo "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-x86_64" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-arm64" -create -output "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd"
+        sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-arm64"
 
-     rm -f "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-x86_64" 
+        rm -f "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd"
 
-     rm -f "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-arm64" 
+        lipo "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-x86_64" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-arm64" -create -output "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd"
+
+        rm -f "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-x86_64"
+
+        rm -f "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd-arm64"
 
    else
-    # Code Sign boinccmd for the stand-alone boinc client if we have a signing identity
-    sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd"
+        # Code Sign boinccmd for the stand-alone boinc client if we have a signing identity
+        sudo codesign -f -o runtime -s "${APPSIGNINGIDENTITY}" "../BOINC_Installer/New_Release_$1_$2_$3/boinc_$1.$2.$3_$arch-apple-darwin/move_to_boinc_dir/boinccmd"
     fi
 fi
 
@@ -577,7 +596,7 @@ ditto -ck --sequesterRsrc --keepParent boinc_$1.$2.$3_macOSX_SymbolTables boinc_
 if [ -d boinc_$1.$2.$3_macOSX_${arch}_vbox ]; then
     ditto -ck --sequesterRsrc --keepParent boinc_$1.$2.$3_macOSX_${arch}_vbox boinc_$1.$2.$3_macOSX_${arch}_vbox.zip
 fi
-hdiutil create -srcfolder boinc_$1.$2.$3_$arch-apple-darwin -ov -format UDZO boinc_$1.$2.$3_$arch-apple-darwin.dmg
+sudo hdiutil create -srcfolder boinc_$1.$2.$3_$arch-apple-darwin -ov -format UDZO boinc_$1.$2.$3_$arch-apple-darwin.dmg
 
 #popd
 cd "${BOINCPath}"

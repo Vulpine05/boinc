@@ -213,7 +213,7 @@ int GET_PROJECT_LIST_OP::do_rpc() {
     int retval;
     char buf[256];
 
-    sprintf(buf, "https://boinc.berkeley.edu/project_list.php");
+    snprintf(buf, sizeof(buf), "https://boinc.berkeley.edu/project_list.php");
     retval = gui_http->do_rpc(
         this, buf, ALL_PROJECTS_LIST_FILENAME_TEMP, true
     );
@@ -289,8 +289,11 @@ void CLIENT_STATE::process_autologin(bool first) {
         //
         FILE* f = boinc_fopen(ACCOUNT_DATA_FILENAME, "r");
         if (!f) return;
-        fgets(buf, 256, f);
+        p = fgets(buf, 256, f);
         fclose(f);
+        if (p == NULL) {
+            return;
+        }
         p = strstr(buf, "__");
         if (!p) {
             boinc_delete_file(ACCOUNT_DATA_FILENAME);

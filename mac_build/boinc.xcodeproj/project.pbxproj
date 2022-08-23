@@ -41,6 +41,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		B13E2D172655655000D5C977 /* detect_rosetta_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B13E2D162655655000D5C977 /* detect_rosetta_cpu.cpp */; };
 		DD000D6A24D0208E0083DE77 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD89165E0F3B1BC200DE5B1C /* OpenGL.framework */; };
 		DD000D6B24D020940083DE77 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD89165E0F3B1BC200DE5B1C /* OpenGL.framework */; };
 		DD000D7424D0244D0083DE77 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD000D7324D0244C0083DE77 /* SystemConfiguration.framework */; };
@@ -93,6 +94,7 @@
 		DD33C6F808B5BB4500768630 /* acct_setup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD33C6F708B5BB4500768630 /* acct_setup.cpp */; };
 		DD33C70408B5BEDE00768630 /* http_curl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD33C70208B5BEDE00768630 /* http_curl.cpp */; };
 		DD35353607E1E13F00C4718D /* boinc_api.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F5755AD302FE063A012012A7 /* boinc_api.cpp */; };
+		DD35BF3A27E3601800F1BBFC /* BOINCSaver.xib in Resources */ = {isa = PBXBuildFile; fileRef = DD35BF3927E3601800F1BBFC /* BOINCSaver.xib */; };
 		DD3741D610FC948C001257EB /* filesys.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F5EAD475031AEFF8018E201A /* filesys.cpp */; };
 		DD3741D910FC94BA001257EB /* url.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DDC06AB210A3E93F00C8D9A5 /* url.cpp */; };
 		DD3E14DB0A774397007E0084 /* boinc in Resources */ = {isa = PBXBuildFile; fileRef = DDD74D8707CF482E0065AC9D /* boinc */; };
@@ -177,7 +179,7 @@
 		DD407ABB07D2FC7D00163EF5 /* mem_usage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD407AB707D2FC7D00163EF5 /* mem_usage.cpp */; };
 		DD431FAA0A41660D0060585A /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20286C33FDCF999611CA2CEA /* Carbon.framework */; };
 		DD4329910BA63DEC007CDF2A /* str_util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD7BF7D70B8E7A9800A009F7 /* str_util.cpp */; };
-		DD48091F081A66F100A174AA /* BOINCSaver.nib in Resources */ = {isa = PBXBuildFile; fileRef = DD48091E081A66F100A174AA /* BOINCSaver.nib */; };
+		DD43475826FB397A00B8880F /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD43474F26FB378100B8880F /* QuartzCore.framework */; };
 		DD4AE04D13652BD700285859 /* cc_config.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD4AE04B13652BD700285859 /* cc_config.cpp */; };
 		DD4AE05013652C1300285859 /* cc_config.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD4AE04B13652BD700285859 /* cc_config.cpp */; };
 		DD4EC65A08A0A7AF009AA08F /* gui_rpc_client_ops.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD73E34E08A0694000656EB1 /* gui_rpc_client_ops.cpp */; };
@@ -215,6 +217,7 @@
 		DD5F656523606AED009ED2A2 /* hostinfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD344BB607C5AEEE0043025C /* hostinfo.cpp */; };
 		DD5F656623607472009ED2A2 /* gfx_cleanup in Resources */ = {isa = PBXBuildFile; fileRef = DD5F654123605B41009ED2A2 /* gfx_cleanup */; };
 		DD5FE1B517828887003339DF /* translate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DDF9350F176B0D0C00A2793C /* translate.cpp */; };
+		DD64A7782703379F005FE681 /* MacBitmapComboBox.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD64A774270329AA005FE681 /* MacBitmapComboBox.cpp */; };
 		DD64D8011F6BE5BA00FEEAAA /* MultiGPUMig.defs in Sources */ = {isa = PBXBuildFile; fileRef = DD64D8001F6BE5BA00FEEAAA /* MultiGPUMig.defs */; settings = {ATTRIBUTES = (Client, Server, ); }; };
 		DD6617880A3FFD8C00FFEBEB /* check_security.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD6617870A3FFD8C00FFEBEB /* check_security.cpp */; };
 		DD67F8140ADB9DD000B0015E /* wxPieCtrl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD40E75D0ADB87BC00214518 /* wxPieCtrl.cpp */; };
@@ -242,7 +245,6 @@
 		DD76BF9A17CB46830075936D /* opencl_boinc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD76BF9117CB45870075936D /* opencl_boinc.cpp */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		DD7748B50A356D6C0025D05E /* SetupSecurity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD7748B40A356D6C0025D05E /* SetupSecurity.cpp */; };
 		DD7749680A3596380025D05E /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD1929D80918A2F100C31BCF /* Security.framework */; };
-		DD77A71812F2D1C9006B82E9 /* MacBitmapComboBox.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD77A71612F2D1C9006B82E9 /* MacBitmapComboBox.cpp */; };
 		DD7A5D8312EEBE5E0006268E /* sg_TaskCommandPopup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD7A5D8212EEBE5E0006268E /* sg_TaskCommandPopup.cpp */; };
 		DD7A5D9F12EEBFC20006268E /* sg_ProjectWebSitesPopup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD7A5D9E12EEBFC20006268E /* sg_ProjectWebSitesPopup.cpp */; };
 		DD7A5DAB12EEC37B0006268E /* sg_ProjectCommandPopup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD7A5DAA12EEC37B0006268E /* sg_ProjectCommandPopup.cpp */; };
@@ -583,6 +585,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		B15487172667809100A9FDBA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 20286C28FDCF999611CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD407A4907D2FB1200163EF5;
+			remoteInfo = libboinc;
+		};
+		B1A32E54265D206800896566 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 20286C28FDCF999611CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B13E2D0E265564D100D5C977;
+			remoteInfo = detect_rosetta_cpu;
+		};
 		DD095D1E0F3B22DE000902F5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 20286C28FDCF999611CA2CEA /* Project object */;
@@ -838,6 +854,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		B13E2D0D265564D100D5C977 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		DD3E15350A774397007E0084 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -873,6 +898,8 @@
 		AA8B6B1C046C364400A80164 /* app_ipc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = app_ipc.h; path = ../lib/app_ipc.h; sourceTree = SOURCE_ROOT; };
 		AAA31C97042157A800A80164 /* shmem.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = shmem.cpp; sourceTree = "<group>"; };
 		AAA31C98042157A800A80164 /* shmem.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = shmem.h; path = ../lib/shmem.h; sourceTree = SOURCE_ROOT; };
+		B13E2D0F265564D100D5C977 /* detect_rosetta_cpu */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = detect_rosetta_cpu; sourceTree = BUILT_PRODUCTS_DIR; };
+		B13E2D162655655000D5C977 /* detect_rosetta_cpu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = detect_rosetta_cpu.cpp; sourceTree = "<group>"; };
 		DD000D7324D0244C0083DE77 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = /System/Library/Frameworks/SystemConfiguration.framework; sourceTree = "<absolute>"; };
 		DD0052F710CA6F1D0067570C /* cs_proxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = cs_proxy.cpp; path = ../client/cs_proxy.cpp; sourceTree = SOURCE_ROOT; };
 		DD0052F810CA6F1D0067570C /* cs_proxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cs_proxy.h; path = ../client/cs_proxy.h; sourceTree = SOURCE_ROOT; };
@@ -967,6 +994,7 @@
 		DD344BEE07C5B1770043025C /* proxy_info.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = proxy_info.h; path = ../lib/proxy_info.h; sourceTree = SOURCE_ROOT; };
 		DD344BEF07C5B1770043025C /* proxy_info.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = proxy_info.cpp; sourceTree = "<group>"; };
 		DD35353107E1E05C00C4718D /* libboinc_api.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libboinc_api.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD35BF3927E3601800F1BBFC /* BOINCSaver.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; name = BOINCSaver.xib; path = ../clientscr/res/BOINCSaver.xib; sourceTree = "<group>"; };
 		DD3E15420A774397007E0084 /* BOINCManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BOINCManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD3EAAA6216A25AD00BC673C /* boinc_finish_install */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = boinc_finish_install; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD3EAAAE216A268500BC673C /* finish_install.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = finish_install.cpp; path = ../mac_installer/finish_install.cpp; sourceTree = "<group>"; };
@@ -981,13 +1009,12 @@
 		DD40825707D3076400163EF5 /* reduce_lib.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = reduce_lib.cpp; sourceTree = "<group>"; };
 		DD40825807D3076400163EF5 /* reduce_main.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = reduce_main.cpp; sourceTree = "<group>"; };
 		DD40825907D3076400163EF5 /* reduce.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = reduce.h; path = ../api/reduce.h; sourceTree = SOURCE_ROOT; };
-		DD40827D07D30AA800163EF5 /* jpeglib.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = jpeglib.h; path = ../samples/jpeglib/jpeglib.h; sourceTree = SOURCE_ROOT; };
 		DD40E75D0ADB87BC00214518 /* wxPieCtrl.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = wxPieCtrl.cpp; path = ../clientgui/common/wxPieCtrl.cpp; sourceTree = SOURCE_ROOT; };
 		DD40E75E0ADB87BC00214518 /* wxPieCtrl.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = wxPieCtrl.h; path = ../clientgui/common/wxPieCtrl.h; sourceTree = SOURCE_ROOT; };
+		DD43474F26FB378100B8880F /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		DD4688410C165F3C0089F500 /* Uninstall BOINC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Uninstall BOINC.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD4688430C165F3C0089F500 /* Uninstaller-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Uninstaller-Info.plist"; sourceTree = "<group>"; };
 		DD4688590C1661970089F500 /* uninstall.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = uninstall.cpp; path = ../mac_installer/uninstall.cpp; sourceTree = SOURCE_ROOT; };
-		DD48091E081A66F100A174AA /* BOINCSaver.nib */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = BOINCSaver.nib; path = ../clientscr/res/BOINCSaver.nib; sourceTree = SOURCE_ROOT; };
 		DD4AE04B13652BD700285859 /* cc_config.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = cc_config.cpp; path = ../lib/cc_config.cpp; sourceTree = SOURCE_ROOT; };
 		DD4AE04C13652BD700285859 /* cc_config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cc_config.h; path = ../lib/cc_config.h; sourceTree = SOURCE_ROOT; };
 		DD4C560C0AD389A2009E23C6 /* sg_DlgMessages.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = sg_DlgMessages.cpp; path = ../clientgui/sg_DlgMessages.cpp; sourceTree = SOURCE_ROOT; };
@@ -1037,6 +1064,8 @@
 		DD5F654A23605C87009ED2A2 /* gfx_cleanup.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = gfx_cleanup.mm; path = ../clientscr/gfx_cleanup.mm; sourceTree = "<group>"; };
 		DD6381450870DB78007A2F8E /* mac_icon.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = mac_icon.cpp; sourceTree = "<group>"; };
 		DD6381F80870DD83007A2F8E /* make_app_icon_h.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = make_app_icon_h.cpp; sourceTree = "<group>"; };
+		DD64A774270329AA005FE681 /* MacBitmapComboBox.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MacBitmapComboBox.cpp; path = ../clientgui/mac/MacBitmapComboBox.cpp; sourceTree = "<group>"; };
+		DD64A775270329AA005FE681 /* MacBitmapComboBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MacBitmapComboBox.h; path = ../clientgui/mac/MacBitmapComboBox.h; sourceTree = "<group>"; };
 		DD64D8001F6BE5BA00FEEAAA /* MultiGPUMig.defs */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.mig; path = MultiGPUMig.defs; sourceTree = "<group>"; };
 		DD64DF0409DCC5E000668B3A /* gutil_text.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = gutil_text.cpp; sourceTree = "<group>"; };
 		DD64E7D507D89DB800B176C8 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
@@ -1060,8 +1089,6 @@
 		DD76BF9217CB45870075936D /* opencl_boinc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = opencl_boinc.h; sourceTree = "<group>"; };
 		DD7748980A356C880025D05E /* SetUpSecurity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SetUpSecurity; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD7748B40A356D6C0025D05E /* SetupSecurity.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SetupSecurity.cpp; path = ../clientgui/mac/SetupSecurity.cpp; sourceTree = SOURCE_ROOT; };
-		DD77A71612F2D1C9006B82E9 /* MacBitmapComboBox.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MacBitmapComboBox.cpp; path = ../clientgui/mac/MacBitmapComboBox.cpp; sourceTree = "<group>"; };
-		DD77A71712F2D1C9006B82E9 /* MacBitmapComboBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MacBitmapComboBox.h; path = ../clientgui/mac/MacBitmapComboBox.h; sourceTree = "<group>"; };
 		DD7A5D8112EEBDF30006268E /* sg_TaskCommandPopup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sg_TaskCommandPopup.h; path = ../clientgui/sg_TaskCommandPopup.h; sourceTree = SOURCE_ROOT; };
 		DD7A5D8212EEBE5E0006268E /* sg_TaskCommandPopup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = sg_TaskCommandPopup.cpp; path = ../clientgui/sg_TaskCommandPopup.cpp; sourceTree = SOURCE_ROOT; };
 		DD7A5D9D12EEBFC20006268E /* sg_ProjectWebSitesPopup.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sg_ProjectWebSitesPopup.h; path = ../clientgui/sg_ProjectWebSitesPopup.h; sourceTree = SOURCE_ROOT; };
@@ -1371,6 +1398,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		B13E2D0C265564D100D5C977 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DD1277B1081F3D67007B5DE1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -1402,6 +1436,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DD3E15310A774397007E0084 /* Carbon.framework in Frameworks */,
+				DD43475826FB397A00B8880F /* QuartzCore.framework in Frameworks */,
 				DD3E15320A774397007E0084 /* IOKit.framework in Frameworks */,
 				DD3E15330A774397007E0084 /* Security.framework in Frameworks */,
 				DD21B49D0D750FC600AFFEE5 /* AppKit.framework in Frameworks */,
@@ -1581,6 +1616,7 @@
 				DDF9EC03144EB14B005D6144 /* libboinc_opencl.a */,
 				DD3EAAA6216A25AD00BC673C /* boinc_finish_install */,
 				DD5F654123605B41009ED2A2 /* gfx_cleanup */,
+				B13E2D0F265564D100D5C977 /* detect_rosetta_cpu */,
 			);
 			name = Products;
 			sourceTree = SOURCE_ROOT;
@@ -1588,7 +1624,6 @@
 		20286C29FDCF999611CA2CEA /* ¬´PROJECTNAME¬ª */ = {
 			isa = PBXGroup;
 			children = (
-				DD40827D07D30AA800163EF5 /* jpeglib.h */,
 				F54B8FBE02AC0A0C01FB7237 /* client */,
 				DD81C3F707C5D03B0098A04D /* clientgui */,
 				DDB873950C85072500E0DE1F /* clientscr */,
@@ -1618,10 +1653,10 @@
 				DD957E5A181B908800ECA34E /* thumbnail@2x.png */,
 				DDBC6CA40D5D458700564C49 /* boinc_ss_logo.png */,
 				DDF3028907CCCE2C00701169 /* BOINCMgr.icns */,
+				DD35BF3927E3601800F1BBFC /* BOINCSaver.xib */,
 				DD531BC50C193D3800742E50 /* MacInstaller.icns */,
 				DD531BC70C193D5200742E50 /* MacUninstaller.icns */,
 				DD74B685177074AF005CF7DC /* PutInTrash.icns */,
-				DD48091E081A66F100A174AA /* BOINCSaver.nib */,
 				DDEB3CA80981084A0087E200 /* gridrepublic.icns */,
 				DDF1F4A409822F8A00482C89 /* GR-Branding */,
 				DD64E7D507D89DB800B176C8 /* Info.plist */,
@@ -1643,6 +1678,7 @@
 				DD89165E0F3B1BC200DE5B1C /* OpenGL.framework */,
 				DD0BB7A11F62B105000151B2 /* IOSurface.framework */,
 				DD000D7324D0244C0083DE77 /* SystemConfiguration.framework */,
+				DD43474F26FB378100B8880F /* QuartzCore.framework */,
 			);
 			name = "External Frameworks and Libraries";
 			sourceTree = SOURCE_ROOT;
@@ -2078,6 +2114,7 @@
 				F54B8FC902AC0A0C01FB7237 /* cs_scheduler.cpp */,
 				DD344B9307C5AE2E0043025C /* cs_statefile.cpp */,
 				DD344B9407C5AE2E0043025C /* cs_trickle.cpp */,
+				B13E2D162655655000D5C977 /* detect_rosetta_cpu.cpp */,
 				DD344B9507C5AE2E0043025C /* dhrystone.cpp */,
 				DD344B9607C5AE2E0043025C /* dhrystone.h */,
 				DD344B9707C5AE2E0043025C /* dhrystone2.cpp */,
@@ -2170,9 +2207,9 @@
 				DD30446A0864332D00D73756 /* config.h */,
 				DD1F0ACD0822069E00AFC5FA /* MacGUI.pch */,
 				DD1907FA17D1A2F100596F03 /* MacAccessiblity.mm */,
-				DD77A71612F2D1C9006B82E9 /* MacBitmapComboBox.cpp */,
-				DD77A71712F2D1C9006B82E9 /* MacBitmapComboBox.h */,
 				DDA9D3BB09189A8C0060E7A7 /* Mac_GUI.cpp */,
+				DD64A774270329AA005FE681 /* MacBitmapComboBox.cpp */,
+				DD64A775270329AA005FE681 /* MacBitmapComboBox.h */,
 				DDB295C8185B0DBD00B9F842 /* MacNotification.mm */,
 				DDA12AAD0A369C5800FBDD12 /* SecurityUtility.cpp */,
 				DD7748B40A356D6C0025D05E /* SetupSecurity.cpp */,
@@ -2196,6 +2233,24 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		B13E2D0E265564D100D5C977 /* detect_rosetta_cpu */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B13E2D13265564D100D5C977 /* Build configuration list for PBXNativeTarget "detect_rosetta_cpu" */;
+			buildPhases = (
+				B13E2D0B265564D100D5C977 /* Sources */,
+				B13E2D0C265564D100D5C977 /* Frameworks */,
+				B13E2D0D265564D100D5C977 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B15487182667809100A9FDBA /* PBXTargetDependency */,
+			);
+			name = detect_rosetta_cpu;
+			productName = detect_rosetta_cpu;
+			productReference = B13E2D0F265564D100D5C977 /* detect_rosetta_cpu */;
+			productType = "com.apple.product-type.tool";
+		};
 		DD1277B2081F3D67007B5DE1 /* PostInstall */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DD9E2371091CBDAE0048316E /* Build configuration list for PBXNativeTarget "PostInstall" */;
@@ -2518,6 +2573,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B1A32E55265D206800896566 /* PBXTargetDependency */,
 				DD25E20D220438090040366F /* PBXTargetDependency */,
 			);
 			name = BOINC_Client;
@@ -2583,6 +2639,9 @@
 			attributes = {
 				LastUpgradeCheck = 0620;
 				TargetAttributes = {
+					B13E2D0E265564D100D5C977 = {
+						CreatedOnToolsVersion = 12.5;
+					};
 					DD3EAAA5216A25AD00BC673C = {
 						CreatedOnToolsVersion = 9.4.1;
 					};
@@ -2627,6 +2686,7 @@
 				DD89161C0F3B17E900DE5B1C /* ss_app */,
 				DDD336F51062235D00867C7D /* AddRemoveUser */,
 				DD5F654023605B41009ED2A2 /* gfx_cleanup */,
+				B13E2D0E265564D100D5C977 /* detect_rosetta_cpu */,
 			);
 		};
 /* End PBXProject section */
@@ -2676,8 +2736,8 @@
 				DDFA60E20CB3391C0037B88C /* gfx_switcher in Resources */,
 				DD5F656623607472009ED2A2 /* gfx_cleanup in Resources */,
 				DD818295245ED4110076E5D0 /* boinc_ss_helper.sh in Resources */,
+				DD35BF3A27E3601800F1BBFC /* BOINCSaver.xib in Resources */,
 				DD0C5A8B0816711400CEC5D7 /* boinc.jpg in Resources */,
-				DD48091F081A66F100A174AA /* BOINCSaver.nib in Resources */,
 				DDBC6CA50D5D458700564C49 /* boinc_ss_logo.png in Resources */,
 				DD957E5B181B908800ECA34E /* thumbnail.png in Resources */,
 				DD957E5C181B908800ECA34E /* thumbnail@2x.png in Resources */,
@@ -2877,7 +2937,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# echo \"BuiltProductsDir = ${BUILT_PRODUCTS_DIR}\"\n# echo \"CONFIGURATIONTEMPDIR = ${CONFIGURATION_TEMP_DIR}\"\n# echo \"SRC ROOT = ${SRCROOT}\"\n# echo \"architecture = ${ARCHS}\"\n# echo \"native architecture = ${ARCHS}\"\n\"${BUILT_PRODUCTS_DIR}/SetVersion\"\n";
+			shellScript = "# Important: To ensure that the relevant *info.plist and *InfoPlist.strings\n# files are available by the time they are needed for building a target:\n# [1] include SetVersion in that target's \"Target Dependencies\" and\n# [2] if a target is dependent on a file created by SetVersion, be sure \n# the file is listed as an Output File for this script. Otherwise, the \n# build may fail due to a race condition.\n#\n# Also, make sure the template used by SetVersion to create the file exists \n# in clientgui/mac/templates.\n#\n# echo \"BuiltProductsDir = ${BUILT_PRODUCTS_DIR}\"\n# echo \"CONFIGURATIONTEMPDIR = ${CONFIGURATION_TEMP_DIR}\"\n# echo \"SRC ROOT = ${SRCROOT}\"\n# echo \"architecture = ${ARCHS}\"\n# echo \"native architecture = ${ARCHS}\"\n codesign -f -o runtime -s - \"${BUILT_PRODUCTS_DIR}/SetVersion\"\n# Run SetVersion in background so we can wait for it to finish running\n\"${BUILT_PRODUCTS_DIR}/SetVersion\" &\nwait $!\n";
 		};
 		DDC8FB2B1F6D398700BE55B8 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2972,6 +3032,14 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		B13E2D0B265564D100D5C977 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B13E2D172655655000D5C977 /* detect_rosetta_cpu.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DD1277B0081F3D67007B5DE1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -3115,7 +3183,7 @@
 				DDB295C9185B0DBD00B9F842 /* MacNotification.mm in Sources */,
 				DD7A5D9F12EEBFC20006268E /* sg_ProjectWebSitesPopup.cpp in Sources */,
 				DD7A5DAB12EEC37B0006268E /* sg_ProjectCommandPopup.cpp in Sources */,
-				DD77A71812F2D1C9006B82E9 /* MacBitmapComboBox.cpp in Sources */,
+				DD64A7782703379F005FE681 /* MacBitmapComboBox.cpp in Sources */,
 				DDAEB54012F8295800EDEDBE /* LogBOINC.cpp in Sources */,
 				DD2B6C8013149177005D6F3E /* procinfo.cpp in Sources */,
 				DD80632D131FAA4100DC8971 /* sg_BoincSimpleFrame.cpp in Sources */,
@@ -3607,6 +3675,16 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		B15487182667809100A9FDBA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD407A4907D2FB1200163EF5 /* libboinc */;
+			targetProxy = B15487172667809100A9FDBA /* PBXContainerItemProxy */;
+		};
+		B1A32E55265D206800896566 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B13E2D0E265564D100D5C977 /* detect_rosetta_cpu */;
+			targetProxy = B1A32E54265D206800896566 /* PBXContainerItemProxy */;
+		};
 		DD095D1F0F3B22DE000902F5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = DD89161C0F3B17E900DE5B1C /* ss_app */;
@@ -3801,11 +3879,28 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		B13E2D14265564D100D5C977 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = x86_64;
+				OTHER_LDFLAGS = "-lboinc";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Development;
+		};
+		B13E2D15265564D100D5C977 /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = x86_64;
+				OTHER_LDFLAGS = "-lboinc";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Deployment;
+		};
 		DD1AFEB60A512D8700EE5B82 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				INFOPLIST_FILE = "Installer-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = (
 					"-D_THREAD_SAFE",
 					"-D_DEBUG",
@@ -3827,7 +3922,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				INFOPLIST_FILE = "Installer-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = (
 					"-D_THREAD_SAFE",
 					"-DNDEBUG",
@@ -3857,13 +3951,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = ../clientgui/mac/MacGUI.pch;
 				HEADER_SEARCH_PATHS = (
-					"../../wxWidgets-3.1.0/include",
-					"../../wxWidgets-3.1.0/build/osx/setup/cocoa/include",
+					"../../wxWidgets-3.1.5/include",
+					"../../wxWidgets-3.1.5/build/osx/setup/cocoa/include",
 					../clientgui,
 					"../lib/**",
 				);
 				INFOPLIST_FILE = Info.plist;
-				LIBRARY_SEARCH_PATHS = "../../wxWidgets-3.1.0/build/osx/build/Debug";
+				LIBRARY_SEARCH_PATHS = "../../wxWidgets-3.1.5/build/osx/build/Debug";
 				OTHER_CFLAGS = (
 					"-DHAVE_CONFIG_H",
 					"-D_FILE_OFFSET_BITS=64",
@@ -3873,7 +3967,7 @@
 					"-D_THREAD_SAFE",
 					"-D__WXMAC__",
 					"-D_DEBUG",
-					"-DMAC_OS_X_VERSION_MAX_ALLOWED=1090",
+					"-DMAC_OS_X_VERSION_MAX_ALLOWED=101000",
 					"-DwxADJUST_MINSIZE=0",
 				);
 				"OTHER_CFLAGS[arch=arm64]" = (
@@ -3885,7 +3979,7 @@
 					"-D_THREAD_SAFE",
 					"-D__WXMAC__",
 					"-D_DEBUG",
-					"-DMAC_OS_X_VERSION_MAX_ALLOWED=1090",
+					"-DMAC_OS_X_VERSION_MAX_ALLOWED=101000",
 					"-DwxADJUST_MINSIZE=0",
 				);
 				"OTHER_CFLAGS[arch=x86_64]" = (
@@ -3897,7 +3991,7 @@
 					"-D_THREAD_SAFE",
 					"-D__WXMAC__",
 					"-D_DEBUG",
-					"-DMAC_OS_X_VERSION_MAX_ALLOWED=1090",
+					"-DMAC_OS_X_VERSION_MAX_ALLOWED=101000",
 					"-DwxADJUST_MINSIZE=0",
 				);
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
@@ -3919,6 +4013,7 @@
 					"-Wno-four-char-constants",
 					"-Wno-unknown-pragmas",
 					"-Wno-write-strings",
+					"-Wno-frame-address",
 				);
 			};
 			name = Development;
@@ -3934,13 +4029,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = ../clientgui/mac/MacGUI.pch;
 				HEADER_SEARCH_PATHS = (
-					"../../wxWidgets-3.1.0/include",
-					"../../wxWidgets-3.1.0/build/osx/setup/cocoa/include",
+					"../../wxWidgets-3.1.5/include",
+					"../../wxWidgets-3.1.5/build/osx/setup/cocoa/include",
 					../clientgui,
 					"../lib/**",
 				);
 				INFOPLIST_FILE = Info.plist;
-				LIBRARY_SEARCH_PATHS = "../../wxWidgets-3.1.0/build/osx/build/Release";
+				LIBRARY_SEARCH_PATHS = "../../wxWidgets-3.1.5/build/osx/build/Release";
 				OTHER_CFLAGS = (
 					"-DHAVE_CONFIG_H",
 					"-D_FILE_OFFSET_BITS=64",
@@ -3952,7 +4047,7 @@
 					"-DSANDBOX",
 					"-D_NDEBUG",
 					"-DBUILDING_MANAGER",
-					"-DMAC_OS_X_VERSION_MAX_ALLOWED=1090",
+					"-DMAC_OS_X_VERSION_MAX_ALLOWED=101000",
 					"-DwxADJUST_MINSIZE=0",
 				);
 				"OTHER_CFLAGS[arch=arm64]" = (
@@ -3966,7 +4061,7 @@
 					"-DSANDBOX",
 					"-D_NDEBUG",
 					"-DBUILDING_MANAGER",
-					"-DMAC_OS_X_VERSION_MAX_ALLOWED=1090",
+					"-DMAC_OS_X_VERSION_MAX_ALLOWED=101000",
 					"-DwxADJUST_MINSIZE=0",
 				);
 				"OTHER_CFLAGS[arch=x86_64]" = (
@@ -3980,7 +4075,7 @@
 					"-DSANDBOX",
 					"-D_NDEBUG",
 					"-DBUILDING_MANAGER",
-					"-DMAC_OS_X_VERSION_MAX_ALLOWED=1090",
+					"-DMAC_OS_X_VERSION_MAX_ALLOWED=101000",
 					"-DwxADJUST_MINSIZE=0",
 				);
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
@@ -4002,6 +4097,7 @@
 					"-Wno-four-char-constants",
 					"-Wno-unknown-pragmas",
 					"-Wno-write-strings",
+					"-Wno-frame-address",
 				);
 			};
 			name = Deployment;
@@ -4134,6 +4230,7 @@
 		DD4688490C165F3C0089F500 /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COPY_PHASE_STRIP = NO;
 				INFOPLIST_FILE = "Uninstaller-Info.plist";
 				OTHER_LDFLAGS = (
 					"-framework",
@@ -4234,14 +4331,14 @@
 				HEADER_SEARCH_PATHS = (
 					../api/,
 					../samples/jpeglib/,
-					"../../freetype-2.9/include",
+					"../../freetype-2.11.0/include",
 					"../../ftgl-2.1.3~rc5/src",
 					"../lib/**",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"${BUILT_PRODUCTS_DIR}/",
-					"../../freetype-2.9/objs/.libs",
+					"../../freetype-2.11.0/objs/.libs",
 					"../../ftgl-2.1.3~rc5/src/.libs",
 				);
 				OTHER_LDFLAGS = (
@@ -4253,6 +4350,13 @@
 					"-lbz2",
 				);
 				PRODUCT_NAME = boincscr;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"-Wno-write-strings",
+					"-Wno-frame-address",
+				);
 			};
 			name = Development;
 		};
@@ -4262,14 +4366,14 @@
 				HEADER_SEARCH_PATHS = (
 					../api/,
 					../samples/jpeglib/,
-					"../../freetype-2.9/include",
+					"../../freetype-2.11.0/include",
 					"../../ftgl-2.1.3~rc5/src",
 					"../lib/**",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"${BUILT_PRODUCTS_DIR}/",
-					"../../freetype-2.9/objs/.libs",
+					"../../freetype-2.11.0/objs/.libs",
 					"../../ftgl-2.1.3~rc5/src/.libs",
 				);
 				OTHER_LDFLAGS = (
@@ -4281,6 +4385,13 @@
 					"-lbz2",
 				);
 				PRODUCT_NAME = boincscr;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"-Wno-write-strings",
+					"-Wno-frame-address",
+				);
 			};
 			name = Deployment;
 		};
@@ -4289,6 +4400,13 @@
 			buildSettings = {
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = boinc;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"-Wno-write-strings",
+					"-Wno-frame-address",
+				);
 			};
 			name = Deployment;
 		};
@@ -4335,18 +4453,19 @@
 		DD9843DE09920F220090855B /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				COPY_PHASE_STRIP = NO;
 				DEPLOYMENT_POSTPROCESSING = YES;
 				HEADER_SEARCH_PATHS = (
-					"../../curl-7.73.0/include",
-					"../../openssl-1.1.0l/include",
+					"../../curl-7.79.1/include",
+					"../../openssl-3.0.0/include",
 					"../lib/**",
 				);
 				INFOPLIST_PREPROCESSOR_DEFINITIONS = "";
 				LIBRARY_SEARCH_PATHS = (
-					"../../curl-7.73.0/lib/.libs",
-					"../../c-ares-1.13.0/.libs",
-					"../../openssl-1.1.0l/",
+					"../../curl-7.79.1/lib/.libs",
+					"../../c-ares-1.17.2/src/lib/.libs",
+					"../../openssl-3.0.0/",
 				);
 				OTHER_LDFLAGS = (
 					"-L.",
@@ -4359,17 +4478,26 @@
 				);
 				PRODUCT_NAME = boinc;
 				STRIP_INSTALLED_PRODUCT = NO;
-				USER_HEADER_SEARCH_PATHS = "../../curl-7.73.0/include ../../openssl-1.1.0l/include ../lib/**";
+				USER_HEADER_SEARCH_PATHS = "../../curl-7.79.1/include ../../openssl-3.0.0/include ../lib/**";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"-Wno-write-strings",
+					"-Wno-frame-address",
+				);
 			};
 			name = Deployment;
 		};
 		DD9843E109920F220090855B /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COPY_PHASE_STRIP = NO;
 				INFOPLIST_FILE = "PostInstall-Info.plist";
 				OTHER_CFLAGS = (
 					"-D_THREAD_SAFE",
 					"-DNDEBUG",
+					"-DDeployment_target=\\\"$MACOSX_DEPLOYMENT_TARGET\\\"",
 					"-D_MAC_INSTALLER",
 					"-DSANDBOX",
 					"-include",
@@ -4417,6 +4545,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				COPY_PHASE_STRIP = YES;
 				DEAD_CODE_STRIPPING = YES;
@@ -4429,7 +4558,7 @@
 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
 				HEADER_SEARCH_PATHS = "../lib/**";
 				LIBRARY_STYLE = STATIC;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				OTHER_CFLAGS = (
 					"-D_THREAD_SAFE",
 					"-DNDEBUG",
@@ -4456,6 +4585,13 @@
 			buildSettings = {
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = boinc;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"-Wno-write-strings",
+					"-Wno-frame-address",
+				);
 			};
 			name = Development;
 		};
@@ -4501,18 +4637,19 @@
 		DD9E2366091CBDAE0048316E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				COPY_PHASE_STRIP = NO;
 				DEPLOYMENT_POSTPROCESSING = YES;
 				HEADER_SEARCH_PATHS = (
-					"../../curl-7.73.0/include",
-					"../../openssl-1.1.0l/include",
+					"../../curl-7.79.1/include",
+					"../../openssl-3.0.0/include",
 					"../lib/**",
 				);
 				INFOPLIST_PREPROCESSOR_DEFINITIONS = "";
 				LIBRARY_SEARCH_PATHS = (
-					"../../curl-7.73.0/lib/.libs",
-					"../../c-ares-1.13.0/.libs",
-					"../../openssl-1.1.0l/",
+					"../../curl-7.79.1/lib/.libs",
+					"../../c-ares-1.17.2/src/lib/.libs",
+					"../../openssl-3.0.0/",
 				);
 				OTHER_CFLAGS = (
 					"-D_THREAD_SAFE",
@@ -4531,7 +4668,14 @@
 				);
 				PRODUCT_NAME = boinc;
 				STRIP_INSTALLED_PRODUCT = NO;
-				USER_HEADER_SEARCH_PATHS = "../../curl-7.73.0/include ../../openssl-1.1.0l/include ../lib/**";
+				USER_HEADER_SEARCH_PATHS = "../../curl-7.79.1/include ../../openssl-3.0.0/include ../lib/**";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"-Wno-write-strings",
+					"-Wno-frame-address",
+				);
 			};
 			name = Development;
 		};
@@ -4542,6 +4686,7 @@
 				OTHER_CFLAGS = (
 					"-D_THREAD_SAFE",
 					"-D_DEBUG",
+					"-DDeployment_target=\\\"$MACOSX_DEPLOYMENT_TARGET\\\"",
 					"-D_MAC_INSTALLER",
 					"-DSANDBOX",
 					"-include",
@@ -4591,6 +4736,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -4602,7 +4748,7 @@
 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO;
 				HEADER_SEARCH_PATHS = "../lib/**";
 				LIBRARY_STYLE = STATIC;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				OTHER_CFLAGS = (
 					"-D_THREAD_SAFE",
 					"-D_DEBUG",
@@ -4743,6 +4889,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		B13E2D13265564D100D5C977 /* Build configuration list for PBXNativeTarget "detect_rosetta_cpu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B13E2D14265564D100D5C977 /* Development */,
+				B13E2D15265564D100D5C977 /* Deployment */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Development;
+		};
 		DD1AFEB50A512D8700EE5B82 /* Build configuration list for PBXNativeTarget "Install_BOINC" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

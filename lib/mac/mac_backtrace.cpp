@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -49,7 +49,7 @@
 *  * For more information on using atos, see the atos man page.
 *
 *  To demangle mangled C++ symbols, use the c++filt command-line tool. 
-*  You may need to prefix C++ symbols with an additonal underscore before 
+*  You may need to prefix C++ symbols with an additional underscore before 
 *  passing them to c++filt (so they begin with two underscore characters).
 *
 * A very useful shell script to add symbols to a crash dump can be found at:
@@ -102,7 +102,7 @@ enum {
 static void PrintOSVersion(int *majorVersion, int *minorVersion);
 
 void PrintBacktrace(void) {
-    int                         err;
+    int                         err __attribute__((unused));
     QCrashReportRef             crRef = NULL;
 
     char                        nameBuf[256], pathToThisProcess[1024];
@@ -341,7 +341,7 @@ void GetNameOfAndPathToThisProcess(char *nameBuf, size_t nameBufLen, char* outbu
     *outbuf = '\0';
     *nameBuf = '\0';
     
-    sprintf(buf, "ps -wo command -p %d", (int)aPID);
+    snprintf(buf, sizeof(buf), "ps -wo command -p %d", (int)aPID);
     f = popen(buf, "r");
     if (f == NULL)
         return;
@@ -350,7 +350,7 @@ void GetNameOfAndPathToThisProcess(char *nameBuf, size_t nameBufLen, char* outbu
     BT_PersistentFGets (outbuf, outBufLen, f);     // Get the UNIX command which ran us
     pclose(f);
 
-    sprintf(buf, "ps -p %d -c -o command", aPID);
+    snprintf(buf, sizeof(buf), "ps -p %d -c -o command", aPID);
     f = popen(buf,  "r");
     if (!f)
         return;

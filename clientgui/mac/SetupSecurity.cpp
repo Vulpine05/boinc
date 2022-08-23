@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2020 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -58,7 +58,7 @@ extern void print_to_log_file(const char *format, ...);
 #define REAL_BOINC_PROJECT_NAME "boinc_project"
 
 #ifdef _DEBUG
-// GDB can't attach to applications which are running as a diferent user or group so
+// GDB can't attach to applications which are running as a different user or group so
 // it ignores the S_ISUID and S_ISGID permission bits when launching an application.
 // To work around this, the _DEBUG version uses the current user and group.
 //
@@ -927,7 +927,7 @@ int AddAdminUserToGroups(char *user_name, bool add_to_boinc_project) {
 
 
 OSStatus ResynchDSSystem() {
-    OSStatus        err = noErr;
+    OSStatus        err __attribute__((unused)) = noErr;
    
     err = DoSudoPosixSpawn("/usr/bin/dscacheutil", "-flushcache", NULL, NULL, NULL, NULL, NULL);
     err = DoSudoPosixSpawn("/usr/bin/dsmemberutil", "flushcache", NULL, NULL, NULL, NULL, NULL);
@@ -936,8 +936,8 @@ OSStatus ResynchDSSystem() {
 
 
 #ifdef _DEBUG
-// GDB can't attach to applications which are running as a diferent user or group so 
-//  it ignores the S_ISUID and S_ISGID permisison bits when launching an application.
+// GDB can't attach to applications which are running as a different user or group so 
+//  it ignores the S_ISUID and S_ISGID permission bits when launching an application.
 // To work around this, the _DEBUG version uses the current user and group.
 static OSStatus SetFakeMasterNames() {
     passwd              *pw;

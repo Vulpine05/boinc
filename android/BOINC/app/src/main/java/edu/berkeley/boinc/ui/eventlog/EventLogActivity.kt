@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,10 +18,13 @@
  */
 package edu.berkeley.boinc.ui.eventlog
 
-import android.content.*
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
@@ -52,9 +55,8 @@ class EventLogActivity : AppCompatActivity() {
 
     private val mConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            if (Logging.VERBOSE) {
-                Log.d(Logging.TAG, "EventLogActivity onServiceConnected")
-            }
+            Logging.logDebug(Logging.Category.GUI_ACTIVITY, "EventLogActivity onServiceConnected")
+
             monitor = IMonitor.Stub.asInterface(service)
             mIsBound = true
 
@@ -70,8 +72,8 @@ class EventLogActivity : AppCompatActivity() {
 
     val monitorService: IMonitor
         get() {
-            if (!mIsBound && Logging.WARNING) {
-                Log.w(Logging.TAG, "Fragment trying to obtain service reference, but Monitor" +
+            if (!mIsBound) {
+                Logging.logWarning(Logging.Category.MONITOR, "Fragment trying to obtain service reference, but Monitor" +
                         " not bound in EventLogActivity")
             }
             return monitor!!
@@ -151,9 +153,7 @@ class EventLogActivity : AppCompatActivity() {
             clipboard.setPrimaryClip(clipData)
             Toast.makeText(applicationContext, R.string.eventlog_copy_toast, Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            if (Logging.WARNING) {
-                Log.w(Logging.TAG, "onCopy failed")
-            }
+            Logging.logError(Logging.Category.USER_ACTION, "onCopy failed")
         }
     }
 
@@ -170,9 +170,7 @@ class EventLogActivity : AppCompatActivity() {
             // Send it off to the Activity-Chooser
             startActivity(Intent.createChooser(emailIntent, "Send mail..."))
         } catch (e: Exception) {
-            if (Logging.WARNING) {
-                Log.w(Logging.TAG, "onEmailTo failed")
-            }
+            Logging.logError(Logging.Category.USER_ACTION, "onEmailTo failed")
         }
     }
 
@@ -185,7 +183,7 @@ class EventLogActivity : AppCompatActivity() {
         when {
             type == 0 -> {
                 text.append(getString(R.string.eventlog_client_header)).append("\n\n")
-                for (index in 0 until clientLogList.childCount) {
+                for (index in 0 until clientLogList.adapter?.itemCount!!) {
                     text.append(clientLogRecyclerViewAdapter.getDateTimeString(index))
                     text.append("|")
                     text.append(clientLogRecyclerViewAdapter.getProject(index))
@@ -201,8 +199,8 @@ class EventLogActivity : AppCompatActivity() {
                     text.append("\n")
                 }
             }
-            Logging.WARNING -> {
-                Log.w(Logging.TAG, "EventLogActivity could not determine which log active.")
+            else -> {
+                Logging.logError(Logging.Category.GUI_ACTIVITY, "EventLogActivity could not determine which log active.")
             }
         }
         return text.toString()

@@ -20,7 +20,6 @@ package edu.berkeley.boinc.ui.eventlog
 
 import android.os.Bundle
 import android.os.RemoteException
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -93,9 +92,7 @@ class EventLogClientFragment : Fragment() {
                     activity.clientLogData.add(y, messages[x])
                 }
             } catch (e: Exception) {
-                if (Logging.ERROR) {
-                    Log.e(Logging.TAG, "EventLogClientFragment.loadRecentMsgs error: ", e)
-                }
+                Logging.logException(Logging.Category.CLIENT, "EventLogClientFragment.loadRecentMsgs error: ", e)
             } //IndexOutOfBoundException
             activity.clientLogRecyclerViewAdapter.notifyDataSetChanged()
             withContext(Dispatchers.Main) { binding.root.isRefreshing = false }
@@ -106,9 +103,8 @@ class EventLogClientFragment : Fragment() {
         if (activity.clientLogData.isNotEmpty()) {
             pastSeqNo = activity.clientLogData.last().seqno
             if (pastSeqNo == 0) {
-                if (Logging.DEBUG) {
-                    Log.d("RetrievePastMsgs", "cancel, oldest messages already loaded")
-                }
+                Logging.logDebug(Logging.Category.CLIENT, "cancel, oldest messages already loaded")
+
                 return // cancel if all past messages are present
             }
         }
@@ -116,10 +112,9 @@ class EventLogClientFragment : Fragment() {
         // message retrieval
         // amount messages loaded when end of list is reached
         val pastMsgsLoadingRange = 50
-        if (Logging.DEBUG) {
-            Log.d("RetrievePastMsgs", "calling monitor with: " + pastSeqNo + " / " +
-                    pastMsgsLoadingRange)
-        }
+        
+        Logging.logDebug(Logging.Category.CLIENT, "calling monitor with: " + pastSeqNo + " / " +
+                pastMsgsLoadingRange)
 
         coroutineScope {
             val messages = withContext(Dispatchers.Default) {
@@ -137,9 +132,7 @@ class EventLogClientFragment : Fragment() {
             try {
                 activity.clientLogData.addAll(messages.reversed())
             } catch (e: Exception) {
-                if (Logging.ERROR) {
-                    Log.e(Logging.TAG, "EventLogClientFragment.loadPastMsgs error: ", e)
-                }
+                Logging.logException(Logging.Category.CLIENT, "EventLogClientFragment.loadPastMsgs error: ", e)
             } //IndexOutOfBoundException
             activity.clientLogRecyclerViewAdapter.notifyDataSetChanged()
         }

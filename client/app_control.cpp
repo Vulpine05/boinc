@@ -630,7 +630,7 @@ bool ACTIVE_TASK::finish_file_present(int &exit_code) {
 
     exit_code = 0;
 
-    sprintf(path, "%s/%s", slot_dir, BOINC_FINISH_CALLED_FILE);
+    snprintf(path, sizeof(path), "%s/%s", slot_dir, BOINC_FINISH_CALLED_FILE);
     FILE* f = boinc_fopen(path, "r");
     if (!f) return false;
     char* p = fgets(buf, sizeof(buf), f);
@@ -642,11 +642,12 @@ bool ACTIVE_TASK::finish_file_present(int &exit_code) {
     }
     p = fgets(buf, sizeof(buf), f);
     if (p && strlen(buf)) {
-        fgets(buf2, sizeof(buf2), f);
-        msg_printf(result->project,
-            strstr(buf2, "notice")?MSG_USER_ALERT:MSG_INFO,
-            "Message from task: %s", buf
-        );
+        if (fgets(buf2, sizeof(buf2), f)) {
+            msg_printf(result->project,
+                strstr(buf2, "notice")?MSG_USER_ALERT:MSG_INFO,
+                "Message from task: %s", buf
+            );
+        }
     }
     fclose(f);
     return true;
@@ -656,7 +657,7 @@ bool ACTIVE_TASK::temporary_exit_file_present(
     double& x, char* buf, bool& is_notice
 ) {
     char path[MAXPATHLEN], buf2[256];
-    sprintf(path, "%s/%s", slot_dir, TEMPORARY_EXIT_FILE);
+    snprintf(path, sizeof(path), "%s/%s", slot_dir, TEMPORARY_EXIT_FILE);
     FILE* f = boinc_fopen(path, "r");
     if (!f) return false;
     strcpy(buf, "");
@@ -667,8 +668,14 @@ bool ACTIVE_TASK::temporary_exit_file_present(
     } else {
         x = y;
     }
-    (void) fgets(buf, 256, f);     // read the \n
-    (void) fgets(buf, 256, f);
+    char *p = fgets(buf, 256, f);     // read the \n
+    if (p) {
+        p = fgets(buf, 256, f);
+    }
+    if (p == NULL) {
+        fclose(f);
+        return false;
+    }
     strip_whitespace(buf);
     is_notice = false;
     if (fgets(buf2, 256, f)) {
@@ -881,7 +888,7 @@ bool ACTIVE_TASK_SET::check_rsc_limits_exceeded() {
         atp = active_tasks[i];
         if (atp->task_state() != PROCESS_EXECUTING) continue;
         if (!atp->result->non_cpu_intensive() && (atp->elapsed_time > atp->max_elapsed_time)) {
-            sprintf(buf, "exceeded elapsed time limit %.2f (%.2fG/%.2fG)",
+            snprintf(buf, sizeof(buf), "exceeded elapsed time limit %.2f (%.2fG/%.2fG)",
                 atp->max_elapsed_time,
                 atp->result->wup->rsc_fpops_bound/1e9,
                 atp->result->avp->flops/1e9
@@ -901,7 +908,7 @@ bool ACTIVE_TASK_SET::check_rsc_limits_exceeded() {
         // accurate bounds.
         //
         if (atp->procinfo.working_set_size_smoothed > atp->max_mem_usage) {
-            sprintf(buf, "working set size > workunit.rsc_memory_bound: %.2fMB > %.2fMB",
+            snprintf(buf, sizeof(buf), "working set size > workunit.rsc_memory_bound: %.2fMB > %.2fMB",
                 atp->procinfo.working_set_size_smoothed/MEGA, atp->max_mem_usage/MEGA
             );
             msg_printf(atp->result->project, MSG_INFO,
@@ -914,7 +921,7 @@ bool ACTIVE_TASK_SET::check_rsc_limits_exceeded() {
         }
 #endif
         if (atp->procinfo.working_set_size_smoothed > max_ram) {
-            sprintf(buf, "working set size > client RAM limit: %.2fMB > %.2fMB",
+            snprintf(buf, sizeof(buf), "working set size > client RAM limit: %.2fMB > %.2fMB",
                 atp->procinfo.working_set_size_smoothed/MEGA, max_ram/MEGA
             );
             msg_printf(atp->result->project, MSG_INFO,
@@ -980,7 +987,7 @@ int ACTIVE_TASK::read_stderr_file() {
     // it's unlikely that more than that will be useful
     //
     int max_len = 63*1024;
-    sprintf(path, "%s/%s", slot_dir, STDERR_FILE);
+    snprintf(path, sizeof(path), "%s/%s", slot_dir, STDERR_FILE);
     if (!boinc_file_exists(path)) return 0;
     int retval  = read_file_malloc(
         path, buf1, max_len, !cc_config.stderr_head
@@ -1553,7 +1560,7 @@ void ACTIVE_TASK_SET::get_msgs() {
         if (atp->get_app_status_msg()) {
             if (old_time != atp->checkpoint_cpu_time) {
                 char buf[512];
-                sprintf(buf, "%s checkpointed", atp->result->name);
+                snprintf(buf, sizeof(buf), "%s checkpointed", atp->result->name);
                 if (atp->overdue_checkpoint) {
                     gstate.request_schedule_cpus(buf);
                 }
@@ -1582,7 +1589,7 @@ void ACTIVE_TASK_SET::get_msgs() {
 //
 void ACTIVE_TASK::write_task_state_file() {
     char path[MAXPATHLEN];
-    sprintf(path, "%s/%s", slot_dir, TASK_STATE_FILENAME);
+    snprintf(path, sizeof(path), "%s/%s", slot_dir, TASK_STATE_FILENAME);
     FILE* f = boinc_fopen(path, "w");
     if (!f) return;
     fprintf(f,
@@ -1613,12 +1620,15 @@ void ACTIVE_TASK::write_task_state_file() {
 //
 void ACTIVE_TASK::read_task_state_file() {
     char buf[4096], path[MAXPATHLEN], s[1024];
-    sprintf(path, "%s/%s", slot_dir, TASK_STATE_FILENAME);
+    snprintf(path, sizeof(path), "%s/%s", slot_dir, TASK_STATE_FILENAME);
     FILE* f = boinc_fopen(path, "r");
     if (!f) return;
     buf[0] = 0;
-    (void) fread(buf, 1, 4096, f);
+    size_t n = fread(buf, 1, 4096, f);
     fclose(f);
+    if (n == 0) {
+        return;
+    }
     buf[4095] = 0;
     double x;
     // TODO: use XML parser

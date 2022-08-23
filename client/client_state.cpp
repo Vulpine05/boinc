@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2020 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -645,7 +645,7 @@ int CLIENT_STATE::init() {
 
     // inform the user if there's a newer version of client
     // NOTE: this must be called AFTER
-    // read_vc_config_file()
+    // read_nvc_config_file()
     //
     newer_version_startup_check();
 
@@ -1202,7 +1202,8 @@ PROJECT* CLIENT_STATE::lookup_project(const char* master_url) {
     for (unsigned int i=0; i<projects.size(); i++) {
         char* q = strstr(projects[i]->master_url, "//");
         if (!q) continue;
-        if (!strcmp(p, q)) {
+        if (!strcasecmp(p, q)) {
+            // note: canonicalize_master_url() doesn't lower-case
             return projects[i];
         }
     }
@@ -1909,7 +1910,7 @@ int CLIENT_STATE::report_result_error(RESULT& res, const char* err_msg) {
     res.set_ready_to_report();
     res.completed_time = now;
 
-    sprintf(buf, "Unrecoverable error for task %s", res.name);
+    snprintf(buf, sizeof(buf), "Unrecoverable error for task %s", res.name);
 #ifndef SIM
     scheduler_op->project_rpc_backoff(res.project, buf);
 #endif
@@ -1934,7 +1935,7 @@ int CLIENT_STATE::report_result_error(RESULT& res, const char* err_msg) {
         // called from:
         // ACTIVE_TASK::start (if couldn't start app)
         // ACTIVE_TASK::restart (if files missing)
-        // ACITVE_TASK_SET::restart_tasks (catch other error returns)
+        // ACTIVE_TASK_SET::restart_tasks (catch other error returns)
         // ACTIVE_TASK::handle_exited_app (on nonzero exit or signal)
         // ACTIVE_TASK::abort_task (if exceeded resource limit)
         // CLIENT_STATE::schedule_cpus (catch-all for resume/start errors)
@@ -1951,7 +1952,7 @@ int CLIENT_STATE::report_result_error(RESULT& res, const char* err_msg) {
         //
         for (i=0; i<res.output_files.size(); i++) {
             if (res.output_files[i].file_info->had_failure(failnum)) {
-                sprintf(buf,
+                snprintf(buf, sizeof(buf),
                     "<upload_error>\n"
                     "    <file_name>%s</file_name>\n"
                     "    <error_code>%d</error_code>\n"
@@ -2296,7 +2297,7 @@ void CLIENT_STATE::log_show_projects() {
     for (unsigned int i=0; i<projects.size(); i++) {
         PROJECT* p = projects[i];
         if (p->hostid) {
-            sprintf(buf, "%d", p->hostid);
+            snprintf(buf, sizeof(buf), "%d", p->hostid);
         } else {
             safe_strcpy(buf, "not assigned yet");
         }

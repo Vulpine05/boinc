@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -20,35 +20,43 @@ package edu.berkeley.boinc
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.os.RemoteException
-import android.util.Log
+import android.widget.Toast
 import androidx.core.content.edit
-import androidx.lifecycle.lifecycleScope
-import androidx.preference.*
+import androidx.preference.CheckBoxPreference
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceCategory
+import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceManager
+import androidx.preference.SeekBarPreference
 import edu.berkeley.boinc.rpc.GlobalPreferences
 import edu.berkeley.boinc.rpc.HostInfo
 import edu.berkeley.boinc.utils.Logging
 import edu.berkeley.boinc.utils.setAppTheme
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import java.io.File
+import java.util.concurrent.ThreadLocalRandom
+import kotlin.streams.asSequence
+
 
 class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener {
     private val hostInfo = BOINCActivity.monitor!!.hostInfo // Get the hostinfo from client via RPC
     private val prefs = BOINCActivity.monitor!!.prefs
+    private val charPool : List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+    private val passwordLength = 32
+    private var authKey = ""
+
 
     override fun onResume() {
         super.onResume()
-        preferenceManager.sharedPreferences.registerOnSharedPreferenceChangeListener(this)
+        preferenceManager.sharedPreferences!!.registerOnSharedPreferenceChangeListener(this)
     }
 
     override fun onPause() {
         super.onPause()
-        preferenceManager.sharedPreferences.unregisterOnSharedPreferenceChangeListener(this)
+        preferenceManager.sharedPreferences!!.unregisterOnSharedPreferenceChangeListener(this)
     }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
         if ("usedCpuCores" !in sharedPreferences) {
             sharedPreferences.edit { putInt("usedCpuCores", pctCpuCoresToNumber(hostInfo, prefs.maxNoOfCPUsPct)) }
         }
@@ -56,10 +64,19 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
             sharedPreferences.edit { putString("deviceName", hostInfo.domainName) }
         }
 
+        if(authKey.isEmpty()) {
+            authKey = readAuthFileContent()
+            if (authKey.isEmpty()) {
+                authKey = generateRandomString(passwordLength)
+                writeAuthFileContent(authKey)
+            }
+            sharedPreferences.edit { putString("authenticationKey", authKey) }
+        }
+
         val stationaryDeviceMode = BOINCActivity.monitor!!.stationaryDeviceMode
         val stationaryDeviceSuspected = BOINCActivity.monitor!!.isStationaryDeviceSuspected
 
-        preferenceManager.sharedPreferences.registerOnSharedPreferenceChangeListener(this)
+        preferenceManager.sharedPreferences!!.registerOnSharedPreferenceChangeListener(this)
 
         setPreferencesFromResource(R.xml.root_preferences, rootKey)
 
@@ -78,6 +95,12 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
         } else {
             usedCpuCores?.max = hostInfo.noOfCPUs
         }
+
+        val preference = findPreference<EditTextPreference>("authenticationKey")!!
+        preference.setSummaryProvider {
+            getString(R.string.prefs_remote_boinc_relaunched) + '\n' +
+            setAsterisks(authKey.length)
+        }
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String) {
@@ -90,50 +113,44 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
                 setAdvancedPreferencesVisibility()
             }
             "suspendWhenScreenOn" -> BOINCActivity.monitor!!.suspendWhenScreenOn = sharedPreferences.getBoolean(key, true)
-            "deviceName" -> BOINCActivity.monitor!!.setDomainName(sharedPreferences.getString(key, ""))
+            "deviceName" -> BOINCActivity.monitor!!.setDomainName(sharedPreferences.getString(key, "") ?: "")
             "theme" -> setAppTheme(sharedPreferences.getString(key, "light")!!)
 
             // Network
             "networkWiFiOnly" -> {
                 prefs.networkWiFiOnly = sharedPreferences.getBoolean(key, true)
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "dailyTransferLimitMB" -> {
                 val dailyTransferLimitMB = sharedPreferences.getString(key, prefs.dailyTransferLimitMB.toString())
                 prefs.dailyTransferLimitMB = dailyTransferLimitMB?.toDouble() ?: 0.0
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "dailyTransferPeriodDays" -> {
                 val dailyTransferPeriodDays = sharedPreferences.getString(key, prefs.dailyTransferPeriodDays.toString())
                 prefs.dailyTransferPeriodDays = dailyTransferPeriodDays?.toInt() ?: 0
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
 
             // Power
             "powerSources" -> {
                 val powerSources = sharedPreferences.getStringSet(key,
                         resources.getStringArray(R.array.power_source_default).toSet()) ?: emptySet()
-                Log.d(Logging.TAG, "powerSources: $powerSources")
+                Logging.logDebug(Logging.Category.SETTINGS, "powerSources: $powerSources")
                 BOINCActivity.monitor!!.powerSourceAc = "wall" in powerSources
                 BOINCActivity.monitor!!.powerSourceUsb = "usb" in powerSources
                 BOINCActivity.monitor!!.powerSourceWireless = "wireless" in powerSources
                 prefs.runOnBatteryPower = "battery" in powerSources
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "stationaryDeviceMode" -> BOINCActivity.monitor!!.stationaryDeviceMode = sharedPreferences.getBoolean(key, false)
             "maxBatteryTemp" -> {
                 prefs.batteryMaxTemperature = sharedPreferences.getString(key, "40")?.toDouble() ?: 40.0
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "minBatteryLevel" -> {
                 prefs.batteryChargeMinPct = sharedPreferences.getInt(key, 90).toDouble()
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
 
             // CPU
@@ -141,66 +158,83 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
                 val usedCpuCores = sharedPreferences.getInt(key, pctCpuCoresToNumber(hostInfo,
                         prefs.maxNoOfCPUsPct))
                 prefs.maxNoOfCPUsPct = numberCpuCoresToPct(hostInfo, usedCpuCores)
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "cpuUsageLimit" -> {
                 prefs.cpuUsageLimit = sharedPreferences.getInt(key, 100).toDouble()
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "suspendCpuUsage" -> {
                 prefs.suspendCpuUsage = sharedPreferences.getInt(key, 50).toDouble()
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
 
             // Storage
             "diskMaxUsedPct" -> {
                 prefs.diskMaxUsedPct = sharedPreferences.getInt(key, 90).toDouble()
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "diskMinFreeGB" -> {
                 prefs.diskMinFreeGB = sharedPreferences.getString(key, "0.1")?.toDouble() ?: 0.1
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "diskInterval" -> {
                 prefs.diskInterval = sharedPreferences.getString(key, "60")?.toDouble() ?: 60.0
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
 
             // Memory
             "maxRamUsedIdle" -> {
                 prefs.ramMaxUsedIdleFrac = sharedPreferences.getInt(key, 50).toDouble()
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
 
             // Other
             "workBufMinDays" -> {
                 prefs.workBufMinDays = sharedPreferences.getString(key, "0.1")?.toDouble() ?: 0.1
-
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+                writeClientPrefs(prefs)
             }
             "workBufAdditionalDays" -> {
                 prefs.workBufAdditionalDays = sharedPreferences.getString(key, "0.5")?.toDouble() ?: 0.5
+                writeClientPrefs(prefs)
+            }
 
-                lifecycleScope.launch { writeClientPrefs(prefs) }
+            // Remote
+            "authenticationKey" -> {
+                val currentAuthKey = sharedPreferences.getString(key, "")!!
+                if (currentAuthKey.isEmpty()) {
+                    sharedPreferences.edit { putString(key, authKey) }
+                    findPreference<EditTextPreference>(key)?.text = authKey
+                    Toast.makeText(activity, R.string.prefs_remote_empty_password, Toast.LENGTH_SHORT).show()
+                } else {
+                    authKey = currentAuthKey
+                    writeAuthFileContent(authKey)
+                    quitClient()
+                }
+            }
+
+            "remoteEnable" -> {
+                val isRemote = sharedPreferences.getBoolean(key, false)
+                BOINCActivity.monitor!!.isRemote = isRemote
+                findPreference<EditTextPreference>("authenticationKey")?.isVisible = isRemote
+                quitClient()
             }
 
             // Debug
             "clientLogFlags" -> {
-                lifecycleScope.launch {
-                    val flags = sharedPreferences.getStringSet(key, emptySet()) ?: emptySet()
-                    BOINCActivity.monitor!!.setCcConfig(formatOptionsToCcConfig(flags))
-                }
+                val flags = sharedPreferences.getStringSet(key, emptySet()) ?: emptySet()
+                BOINCActivity.monitor!!.setCcConfigAsync(formatOptionsToCcConfig(flags))
+            }
+            "guiLogCategories" -> {
+                val categories = (sharedPreferences.getStringSet(key, emptySet()) ?: emptySet()).toList()
+                BOINCActivity.monitor!!.logCategories = categories
+                Logging.setLogCategories(categories)
             }
             "logLevel" -> {
-                BOINCActivity.monitor!!.logLevel = sharedPreferences.getInt(key,
-                        resources.getInteger(R.integer.prefs_default_loglevel))
+                val logLevel = sharedPreferences.getInt(key,
+                    resources.getInteger(R.integer.prefs_default_loglevel))
+                BOINCActivity.monitor!!.logLevel = logLevel
+                Logging.setLogLevel(logLevel)
             }
         }
     }
@@ -231,19 +265,43 @@ class SettingsFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
         findPreference<PreferenceCategory>("memory")?.isVisible = showAdvanced
         findPreference<PreferenceCategory>("other")?.isVisible = showAdvanced
         findPreference<PreferenceCategory>("debug")?.isVisible = showAdvanced
+        findPreference<PreferenceCategory>("remote")?.isVisible = showAdvanced
+        val isRemote = findPreference<CheckBoxPreference>("remoteEnable")?.isChecked
+        findPreference<EditTextPreference>("authenticationKey")?.isVisible = showAdvanced && isRemote == true
     }
 
-    private suspend fun writeClientPrefs(prefs: GlobalPreferences) = coroutineScope {
-        val success = async {
-            return@async try {
-                BOINCActivity.monitor!!.setGlobalPreferences(prefs)
-            } catch (e: RemoteException) {
-                false
-            }
+    private fun writeClientPrefs(prefs: GlobalPreferences) {
+        BOINCActivity.monitor!!.setGlobalPreferencesAsync(prefs) {
+            success: Boolean ->
+                Logging.logDebug(Logging.Category.SETTINGS, "writeClientPrefs() async call returned: $success")
         }
+    }
 
-        if (Logging.DEBUG) {
-            Log.d(Logging.TAG, "writeClientPrefs() async call returned: ${success.await()}")
+    private fun generateRandomString(length: Int) : String {
+        return ThreadLocalRandom.current()
+                .ints(length.toLong(), 0, charPool.size)
+                .asSequence()
+                .map(charPool::get)
+                .joinToString("")
+    }
+
+    // Return the password in asterisks
+    private fun setAsterisks(length: Int): String {
+        return "*".repeat(length)
+    }
+
+    private fun readAuthFileContent(): String {
+        val authFile = File(BOINCActivity.monitor!!.authFilePath)
+        return if (authFile.exists()) authFile.bufferedReader().readLine() else ""
+    }
+
+    private fun writeAuthFileContent(value: String) {
+        File(BOINCActivity.monitor!!.authFilePath).writeText(value)
+    }
+
+    private fun quitClient() {
+        BOINCActivity.monitor!!.quitClientAsync { result: Boolean ->
+            Logging.logDebug(Logging.Category.SETTINGS, "SettingActivity: quitClient returned: $result")
         }
     }
 }

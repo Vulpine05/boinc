@@ -249,6 +249,26 @@
 
     <PreferenceCategory
             app:iconSpaceReserved="false"
+            app:key="remote"
+            app:title="@string/prefs_category_remote">
+
+        <CheckBoxPreference
+                app:defaultValue="@bool/prefs_default_remote"
+                app:iconSpaceReserved="false"
+                app:key="remoteEnable"
+                app:summary="@string/prefs_remote_summary"
+                app:title="@string/prefs_remote_header" />
+
+        <EditTextPreference
+                app:iconSpaceReserved="false"
+                app:key="authenticationKey"
+                app:title="@string/prefs_remote_authentication_key"
+                app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+            app:iconSpaceReserved="false"
             app:key="debug"
             app:title="@string/prefs_category_debug">
 
@@ -260,11 +280,19 @@
                 app:key="clientLogFlags"
                 app:title="@string/prefs_client_log_flags_header" />
 
+        <MultiSelectListPreference
+                app:defaultValue="@array/prefs_gui_log_categories_default"
+                app:entries="@array/prefs_gui_log_categories"
+                app:entryValues="@array/prefs_gui_log_categories"
+                app:iconSpaceReserved="false"
+                app:key="guiLogCategories"
+                app:title="@string/prefs_gui_log_categories" />
+
         <SeekBarPreference
                 android:max="5"
                 app:defaultValue="2"
                 app:iconSpaceReserved="false"
-                app:key="guiLogLevel"
+                app:key="logLevel"
                 app:min="0"
                 app:seekBarIncrement="1"
                 app:showSeekBarValue="true"

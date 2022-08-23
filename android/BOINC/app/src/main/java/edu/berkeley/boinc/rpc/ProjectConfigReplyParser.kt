@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,7 +18,6 @@
  */
 package edu.berkeley.boinc.rpc
 
-import android.util.Log
 import android.util.Xml
 import edu.berkeley.boinc.utils.Logging
 import org.xml.sax.Attributes
@@ -108,10 +107,8 @@ class ProjectConfigReplyParser : BaseParser() {
                 }
             }
             mElementStarted = false
-        } catch (e: NumberFormatException) {
-            if (Logging.ERROR) {
-                Log.e(Logging.TAG, "ProjectConfigReplyParser.endElement error: ", e)
-            }
+        } catch (e: Exception) {
+            Logging.logException(Logging.Category.XML, "ProjectConfigReplyParser.endElement error: ", e)
         }
     }
 
@@ -137,6 +134,9 @@ class ProjectConfigReplyParser : BaseParser() {
                 Xml.parse(rpcResult.replace("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>", ""), parser)
                 parser.projectConfig
             } catch (e: SAXException) {
+                Logging.logException(Logging.Category.RPC, "ProjectConfigReplyParser: malformed XML ", e)
+                Logging.logDebug(Logging.Category.XML, "ProjectConfigReplyParser: $rpcResult")
+
                 null
             }
         }

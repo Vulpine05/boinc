@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // https://boinc.berkeley.edu
-// Copyright (C) 2020 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -23,7 +23,6 @@
 #ifdef _WIN32
 #include "boinc_win.h"
 #endif
-#include "config.h"
 
 #if !defined(_WIN32) || defined (__CYGWIN__)
 #include <cstdio>
@@ -330,6 +329,7 @@ struct FILE_TRANSFER {
     double next_request_time;
     int status;
     double time_so_far;
+    double estimated_xfer_time_remaining;
     double bytes_xferred;
     double file_offset;
     double xfer_speed;
@@ -717,6 +717,7 @@ struct RPC_CLIENT {
     int result_op(RESULT&, const char*);
     int get_host_info(HOST_INFO&);
     int set_host_info(HOST_INFO&);
+    int reset_host_info();
     int quit();
     int acct_mgr_info(ACCT_MGR_INFO&);
     const char* mode_name(int mode);

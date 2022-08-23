@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2019 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -82,7 +82,7 @@ static void auth_failure(MIOFILE& fout) {
 }
 
 void GUI_RPC_CONN::handle_auth1(MIOFILE& fout) {
-    sprintf(nonce, "%f", dtime());
+    snprintf(nonce, sizeof(nonce), "%f", dtime());
     fout.printf("<nonce>%s</nonce>\n", nonce);
 }
 
@@ -152,7 +152,8 @@ static void handle_get_project_status(GUI_RPC_CONN& grc) {
 
 static void handle_get_disk_usage(GUI_RPC_CONN& grc) {
     unsigned int i;
-    double size, boinc_non_project, d_allowed, boinc_total;
+    double size, boinc_non_project, d_allowed;
+//    double boinc_total;
 
     grc.mfout.printf("<disk_usage_summary>\n");
     int retval = get_filesystem_info(
@@ -184,7 +185,7 @@ static void handle_get_disk_usage(GUI_RPC_CONN& grc) {
         }
     }
 #endif
-    boinc_total = boinc_non_project;
+//    boinc_total = boinc_non_project;
     gstate.get_disk_usages();
     for (i=0; i<gstate.projects.size(); i++) {
         PROJECT* p = gstate.projects[i];
@@ -195,7 +196,7 @@ static void handle_get_disk_usage(GUI_RPC_CONN& grc) {
             "</project>\n",
             p->master_url, p->disk_usage
         );
-        boinc_total += p->disk_usage;
+//        boinc_total += p->disk_usage;
     }
     d_allowed = gstate.allowed_disk_usage(gstate.total_disk_usage);
     grc.mfout.printf(
@@ -629,6 +630,16 @@ static void handle_abort_result(GUI_RPC_CONN& grc) {
 
 static void handle_get_host_info(GUI_RPC_CONN& grc) {
     gstate.host_info.write(grc.mfout, true, true);
+}
+
+static void handle_reset_host_info(GUI_RPC_CONN& grc) {
+    gstate.host_info.get_host_info(true);
+    // the amount of RAM or #CPUs may have changed
+    //
+    gstate.set_ncpus();
+    gstate.request_schedule_cpus("reset_host_info");
+    gstate.show_host_info();
+    grc.mfout.printf("<success/>\n");
 }
 
 static void handle_get_screensaver_tasks(GUI_RPC_CONN& grc) {
@@ -1085,7 +1096,14 @@ static void handle_acct_mgr_rpc_poll(GUI_RPC_CONN& grc) {
 
 static void handle_get_newer_version(GUI_RPC_CONN& grc) {
     gstate.new_version_check(true);
-
+    // this initiates an RPC to get version info.
+    // Wait for it to finish.
+    //
+    while (gstate.get_current_version_op.gui_http->gui_http_state != HTTP_STATE_IDLE) {
+        if (!gstate.poll_slow_events()) {
+            gstate.do_io_or_sleep(1.0);
+        }
+    }
     grc.mfout.printf(
         "<newer_version>%s</newer_version>\n"
         "<download_url>%s</download_url>\n",
@@ -1184,8 +1202,7 @@ static void handle_get_app_config(GUI_RPC_CONN& grc) {
         grc.mfout.printf("<error>no such project</error>");
         return;
     }
-    sprintf(path, "%s/%s", p->project_dir(), APP_CONFIG_FILE_NAME);
-    printf("path: %s\n", path);
+    snprintf(path, sizeof(path), "%s/%s", p->project_dir(), APP_CONFIG_FILE_NAME);
     int retval = read_file_string(path, s);
     if (retval) {
         grc.mfout.printf("<error>app_config.xml not found</error>\n");
@@ -1237,22 +1254,22 @@ static void handle_set_app_config(GUI_RPC_CONN& grc) {
         }
     }
     if (parse_retval) {
-        grc.mfout.printf("<error>XML parse failed<error/>\n");
+        grc.mfout.printf("<error>XML parse failed</error>\n");
         return;
     }
     PROJECT* p = gstate.lookup_project(url.c_str());
     if (!p) {
-        grc.mfout.printf("<error>no such project<error/>\n");
+        grc.mfout.printf("<error>no such project</error>\n");
         return;
     }
     char path[MAXPATHLEN];
-    sprintf(path, "%s/app_config.xml", p->project_dir());
+    snprintf(path, sizeof(path), "%s/app_config.xml", p->project_dir());
     FILE* f = boinc_fopen(path, "w");
     if (!f) {
         msg_printf(p, MSG_INTERNAL_ERROR,
             "Can't open app config file %s", path
         );
-        grc.mfout.printf("<error>can't open app_config.xml file<error/>\n");
+        grc.mfout.printf("<error>can't open app_config.xml file</error>\n");
         return;
 
     }
@@ -1528,7 +1545,7 @@ static void handle_run_graphics_app(GUI_RPC_CONN& grc) {
             argc = 5;
         } else {
             char theSlot[10];
-            sprintf(theSlot, "%d", slot);
+            snprintf(theSlot, sizeof(theSlot), "%d", slot);
             argv[0] = const_cast<char*>(SWITCHER_FILE_NAME);
             argv[1] = execDir;
             argv[2] = saverName[iBrandID];
@@ -1743,10 +1760,7 @@ struct GUI_RPC {
     char alt_req_tag[256];
     GUI_RPC_HANDLER handler;
     bool auth_required;
-        // operations that require authentication only for non-local clients.
-        // Use this only for information that should be available to people
-        // sharing this computer (e.g. what jobs are running)
-        // but not for anything sensitive (passwords etc.)
+        // operations that require authentication with RPC key
     bool enable_network;
         // RPCs that should enable network communication for 5 minutes,
         // overriding other factors.
@@ -1764,7 +1778,7 @@ struct GUI_RPC {
     }
 };
 
-                                                                    // local auth required
+                                                                    // auth required
                                                                             // enable network
                                                                                     // read-only
 GUI_RPC gui_rpcs[] = {
@@ -1819,6 +1833,7 @@ GUI_RPC gui_rpcs[] = {
     GUI_RPC("read_global_prefs_override", handle_read_global_prefs_override,
                                                                     true,   false,  false),
     GUI_RPC("report_device_status", handle_report_device_status,    true,   false,  false),
+    GUI_RPC("reset_host_info", handle_reset_host_info,              true,   false,  false),
     GUI_RPC("resume_result", handle_resume_result,                  true,   false,  false),
     GUI_RPC("run_benchmarks", handle_run_benchmarks,                true,   false,  false),
     GUI_RPC("set_app_config", handle_set_app_config,                true,   false,  false),
@@ -1858,7 +1873,7 @@ static int handle_rpc_aux(GUI_RPC_CONN& grc) {
     int retval = 0;
     grc.mfin.init_buf_read(grc.request_msg);
     if (grc.xp.get_tag()) {    // parse <boinc_gui_rpc_request>
-        grc.mfout.printf("<error>missing boing_gui_rpc_request tag</error>\n");
+        grc.mfout.printf("<error>missing boinc_gui_rpc_request tag</error>\n");
         return 0;
     }
     if (grc.xp.get_tag()) {    // parse the request tag

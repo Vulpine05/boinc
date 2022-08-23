@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,7 +18,7 @@
  */
 package edu.berkeley.boinc.utils
 
-import org.apache.commons.io.input.CharSequenceReader
+import com.google.common.io.CharSource
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.io.Reader
@@ -28,32 +28,32 @@ const val STRING = "This is a string."
 
 class BOINCUtilsTest {
     private var stringBuilder = StringBuilder(STRING)
-    private var reader: Reader = CharSequenceReader(stringBuilder)
+    private var reader: Reader = CharSource.wrap(stringBuilder).openStream()
 
     @Test
-    fun testReadLineLimit_whenReaderHasEmptyStringAndLimitIs1_thenExpectNull() {
+    fun `ReadLineLimit() When Reader has empty string and limit is 1 then expect null`() {
         stringBuilder.setLength(0)
         Assertions.assertNull(reader.readLineLimit(1))
     }
 
     @Test
-    fun testReadLineLimit_whenReaderHasNonEmptyStringAndLimitIsLengthOfString_thenExpectReaderString() {
+    fun `ReadLineLimit() When Reader has non empty string and limit is length of string then expect Reader string`() {
         Assertions.assertEquals(STRING, reader.readLineLimit(stringBuilder.length))
     }
 
     @Test
-    fun testReadLineLimit_whenReaderHasNonEmptyStringAndLimitIsLengthOfStringPlus1_thenExpectReaderString() {
+    fun `ReadLineLimit() When Reader has non empty string and limit is length of string + 1 then expect Reader string`() {
         Assertions.assertEquals(STRING, reader.readLineLimit(stringBuilder.length + 1))
     }
 
     @Test
-    fun testReadLineLimit_whenReaderHasStringWithNewlineAndLimitIsLengthOfString_thenExpectStringWithoutNewline() {
+    fun `ReadLineLimit() When Reader has string with new line and limit is length of string then expect string without new line`() {
         stringBuilder.setCharAt(4, '\n')
         Assertions.assertEquals(THIS, reader.readLineLimit(stringBuilder.length))
     }
 
     @Test
-    fun testReadLineLimit_whenReaderHasStringWithCarriageReturnAndLimitIsLengthOfString_thenExpectStringWithoutCarriageReturn() {
+    fun `ReadLineLimit() When Reader has string with carriage return and limit is length of string then expect string without carriage return`() {
         stringBuilder.setCharAt(4, '\r')
         Assertions.assertEquals(THIS, reader.readLineLimit(stringBuilder.length))
     }

@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2016 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -21,32 +21,28 @@ package edu.berkeley.boinc.rpc;
 
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
-import android.util.Log;
 import android.util.Xml;
-
-import org.apache.commons.io.input.CharSequenceReader;
-import org.apache.commons.lang3.StringUtils;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
-
+import com.google.common.io.CharSource;
+import edu.berkeley.boinc.utils.BOINCDefs;
+import edu.berkeley.boinc.utils.BOINCUtils;
+import edu.berkeley.boinc.utils.Logging;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
-import edu.berkeley.boinc.utils.BOINCDefs;
-import edu.berkeley.boinc.utils.BOINCUtils;
-import edu.berkeley.boinc.utils.Logging;
 import kotlin.text.Charsets;
 import okio.BufferedSink;
 import okio.BufferedSource;
 import okio.ByteString;
 import okio.Okio;
-
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 import static org.apache.commons.lang3.BooleanUtils.toInteger;
 
 
@@ -61,6 +57,7 @@ public class RpcClient {
     static final String AUTHORIZED = "authorized";
     static final String UNAUTHORIZED = "unauthorized";
 
+    private static final int CONNECT_TIMEOUT = 30000;
     private static final int READ_TIMEOUT = 15000;         // 15s
     private static final int READ_BUF_SIZE = 2048;
     private static final int RESULT_BUILDER_INIT_SIZE = 131072; // Yes, 128K
@@ -84,7 +81,8 @@ public class RpcClient {
     public static final int MGR_DETACH = 30;
     public static final int MGR_SYNC = 31;
 
-    private LocalSocket mSocket;
+    private LocalSocket mSocket    = null;
+    private Socket      mTcpSocket = null;
     private BufferedSource socketSource;
     private BufferedSink socketSink;
     private final byte[] mReadBuffer = new byte[READ_BUF_SIZE];
@@ -134,7 +132,7 @@ public class RpcClient {
         @Override
         public void endElement(String uri, String localName, String qName) throws SAXException {
             super.endElement(uri, localName, qName);
-            if (StringUtils.equalsAnyIgnoreCase(localName, AUTHORIZED, UNAUTHORIZED) && !mParsed) {
+            if (localName != null && (localName.equalsIgnoreCase(AUTHORIZED) || localName.equalsIgnoreCase(UNAUTHORIZED)) && !mParsed) {
                 mResult.append(localName.toLowerCase());
                 mParsed = true;
             }
@@ -164,40 +162,43 @@ public class RpcClient {
      */
 
     /**
+     * Connect to BOINC core client via TCP Socket (abstract, "boinc_socket")
+     *
+     * @return true for success, false for failure
+     */
+    public boolean open(String address, int port) {
+        closeOpenConnection();
+        try {
+            mTcpSocket = new Socket();
+            mTcpSocket.connect(new InetSocketAddress(address, port), CONNECT_TIMEOUT);
+            mTcpSocket.setSoTimeout(READ_TIMEOUT);
+        } catch (IOException e) {
+            Logging.logException(Logging.Category.CLIENT, "connect failure: IO", e);
+            
+            mTcpSocket = null;
+            return false;
+        }
+        return initBuffersFromSocket(false);
+    }
+
+    /**
      * Connect to BOINC core client via Unix Domain Socket (abstract, "boinc_socket")
      *
      * @return true for success, false for failure
      */
     public boolean open(String socketAddress) {
-        if (isConnected()) {
-            // Already connected
-            if (Logging.LOGLEVEL <= 4)
-                Log.e(Logging.TAG, "Attempt to connect when already connected");
-            // We better close current connection and reconnect (address/port could be different)
-            close();
-        }
+        closeOpenConnection();
         try {
             mSocket = new LocalSocket();
             mSocket.connect(new LocalSocketAddress(socketAddress));
             mSocket.setSoTimeout(READ_TIMEOUT);
-            socketSource = Okio.buffer(Okio.source(mSocket.getInputStream()));
-            socketSink = Okio.buffer(Okio.sink(mSocket.getOutputStream()));
-        } catch (IllegalArgumentException e) {
-            if (Logging.LOGLEVEL <= 4)
-                Log.e(Logging.TAG, "connect failure: illegal argument", e);
-            mSocket = null;
-            return false;
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "connect failure: IO", e);
-            mSocket = null;
-            return false;
-        } catch (Exception e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "connect failure", e);
+            Logging.logException(Logging.Category.CLIENT, "connect failure: IO", e);
+            
             mSocket = null;
             return false;
         }
-        if (Logging.DEBUG) Log.d(Logging.TAG, "Connected successfully");
-        return true;
+        return initBuffersFromSocket(true);
     }
 
     /**
@@ -211,20 +212,28 @@ public class RpcClient {
         try {
             socketSource.close();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "input close failure", e);
+            Logging.logException(Logging.Category.CLIENT, "input close failure", e);
         }
         try {
             socketSink.close();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "output close failure", e);
+            Logging.logException(Logging.Category.CLIENT, "output close failure", e);
         }
         try {
-            mSocket.close();
-            if (Logging.DEBUG) Log.d(Logging.TAG, "close() - Socket closed");
+            if (mTcpSocket != null)  mTcpSocket.close();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "socket close failure", e);
+            Logging.logException(Logging.Category.CLIENT, "Tcp socket close failure", e);
         }
-        mSocket = null;
+        try {
+            if (mSocket != null)  mSocket.close();
+        } catch (IOException e) {
+            Logging.logException(Logging.Category.CLIENT, "Local socket close failure", e);
+        }
+        
+        Logging.logDebug(Logging.Category.CLIENT, "close() - Socket closed");
+        
+        mSocket    = null;
+        mTcpSocket = null;
     }
 
     /**
@@ -258,17 +267,21 @@ public class RpcClient {
             mRequest.setLength(0);
             Xml.parse(auth2Rsp, new Auth2Parser(mRequest));
             if (!mRequest.toString().equals(AUTHORIZED)) {
-                if (Logging.DEBUG) Log.d(Logging.TAG, "authorize() - Failure");
+                Logging.logDebug(Logging.Category.RPC, "authorize() - Failure");
+                
                 return false;
             }
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in authorize()", e);
+            Logging.logException(Logging.Category.RPC, "error in authorize()", e);
             return false;
         } catch (SAXException e) {
-            Log.i(Logging.TAG, "Malformed XML received in authorize()");
+            Logging.logError(Logging.Category.XML, "Malformed XML received in authorize()");
+
             return false;
         }
-        if (Logging.DEBUG) Log.d(Logging.TAG, "authorize() - Successful");
+
+        Logging.logDebug(Logging.Category.RPC, "authorize() - Successful");
+        
         return true;
     }
 
@@ -278,7 +291,8 @@ public class RpcClient {
      * @return true if connected to BOINC core client, false if not connected
      */
     public final boolean isConnected() {
-        return (mSocket != null && mSocket.isConnected());
+        return (mTcpSocket != null && mTcpSocket.isConnected()) ||
+               (mSocket != null && mSocket.isConnected());
     }
 
     /**
@@ -313,12 +327,11 @@ public class RpcClient {
      * @throws IOException if error occurs when sending the request
      */
     protected void sendRequest(String request) throws IOException {
-        if (Logging.RPC_PERFORMANCE && Logging.DEBUG)
-            Log.d(Logging.TAG, "mRequest.capacity() = " + mRequest.capacity());
-        if (Logging.RPC_DATA && Logging.DEBUG)
-            Log.d(Logging.TAG, "Sending request: \n" + request);
-        if (socketSink == null)
+        Logging.logVerbose(Logging.Category.RPC, "mRequest.capacity() = " + mRequest.capacity());
+        Logging.logDebug(Logging.Category.RPC, "Sending request: \n" + request);
+        if (socketSink == null) {
             return;
+        }
         final String requestBody = "<boinc_gui_rpc_request>\n" + request + "</boinc_gui_rpc_request>\n\003";
         socketSink.writeString(requestBody, Charsets.ISO_8859_1);
         socketSink.flush();
@@ -332,8 +345,7 @@ public class RpcClient {
      */
     protected String receiveReply() throws IOException {
         mResult.setLength(0);
-        if (Logging.RPC_PERFORMANCE && Logging.DEBUG)
-            Log.d(Logging.TAG, "mResult.capacity() = " + mResult.capacity());
+        Logging.logVerbose(Logging.Category.RPC, "mResult.capacity() = " + mResult.capacity());
 
         final Instant start = Instant.now();
 
@@ -355,30 +367,30 @@ public class RpcClient {
             }
         } while (true);
 
-        if (Logging.RPC_PERFORMANCE) {
+        if (Logging.isLoggable(Logging.Level.DEBUG, Logging.Category.RPC)) {
             float duration = Duration.between(Instant.now(), start).getSeconds();
             long bytesCount = mResult.length();
             if (duration == 0) duration = 0.001F;
-            if (Logging.DEBUG)
-                Log.d(Logging.TAG, "Reading from socket took " + duration + " seconds, " +
-                                   bytesCount + " bytes read (" + (bytesCount / duration) +
-                                   " bytes/second)");
+            
+            Logging.logDebug(Logging.Category.RPC, "Reading from socket took " + duration + " seconds, " +
+                    bytesCount + " bytes read (" + (bytesCount / duration) +
+                    " bytes/second)");
         }
 
-        if (Logging.RPC_PERFORMANCE && Logging.DEBUG)
-            Log.d(Logging.TAG, "mResult.capacity() = " + mResult.capacity());
+        Logging.logVerbose(Logging.Category.RPC, "mResult.capacity() = " + mResult.capacity());
 
-        if (Logging.RPC_DATA) {
-            BufferedReader dbr = new BufferedReader(new CharSequenceReader(mResult));
+        if (Logging.isLoggable(Logging.Level.DEBUG, Logging.Category.RPC)) {
+            BufferedReader dbr = new BufferedReader(CharSource.wrap(mResult).openStream());
             String dl;
             int ln = 0;
             try {
                 while ((dl = BOINCUtils.readLineLimit(dbr, 4096)) != null) {
                     ++ln;
-                    if (Logging.DEBUG) Log.d(Logging.TAG, String.format("%4d: %s", ln, dl));
+                    
+                    Logging.logDebug(Logging.Category.RPC, String.format("%4d: %s", ln, dl));
                 }
             } catch (IOException e) {
-                if (Logging.ERROR) Log.e(Logging.TAG, "RpcClient.receiveReply error: ", e);
+                Logging.logException(Logging.Category.RPC, "RpcClient.receiveReply error: ", e);
             }
         }
         return mResult.toString();
@@ -399,7 +411,8 @@ public class RpcClient {
             sendRequest("<get_cc_status/>\n");
             return CcStatusParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getCcStatus()", e);
+            Logging.logException(Logging.Category.RPC, "error in getCcStatus()", e);
+            
             e.printStackTrace();
             return null;
         }
@@ -416,8 +429,8 @@ public class RpcClient {
             sendRequest("<get_file_transfers/>\n");
             return TransfersParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING)
-                Log.w(Logging.TAG, "error in getFileTransfers()", e);
+            Logging.logException(Logging.Category.RPC, "error in getFileTransfers()", e);
+            
             return Collections.emptyList();
         }
     }
@@ -433,10 +446,13 @@ public class RpcClient {
         try {
             sendRequest("<get_message_count/>\n");
             int seqNo = MessageCountParser.getSeqnoOfReply(receiveReply());
-            if (Logging.DEBUG) Log.d(Logging.TAG, "RpcClient.getMessageCount returning: " + seqNo);
+            
+            Logging.logDebug(Logging.Category.RPC, "RpcClient.getMessageCount returning: " + seqNo);
+            
             return seqNo;
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getMessageCount()", e);
+            Logging.logException(Logging.Category.RPC, "error in getMessageCount()", e);
+            
             return -1;
         }
     }
@@ -463,8 +479,8 @@ public class RpcClient {
             sendRequest(request);
             return MessagesParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING)
-                Log.w(Logging.TAG, "error in getMessages()", e);
+            Logging.logException(Logging.Category.RPC, "error in getMessages()", e);
+            
             return Collections.emptyList();
         }
     }
@@ -491,8 +507,8 @@ public class RpcClient {
             sendRequest(request);
             return NoticesParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING)
-                Log.w(Logging.TAG, "error in getMessages()", e);
+            Logging.logException(Logging.Category.RPC, "error in getMessages()", e);
+            
             return new ArrayList<>();
         }
     }
@@ -508,7 +524,8 @@ public class RpcClient {
             sendRequest("<get_project_status/>\n");
             return ProjectsParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getProjectStatus()", e);
+            Logging.logException(Logging.Category.RPC, "error in getProjectStatus()", e);
+            
             return Collections.emptyList();
         }
     }
@@ -524,7 +541,8 @@ public class RpcClient {
             sendRequest("<get_results/>\n");
             return ResultsParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getResults()", e);
+            Logging.logException(Logging.Category.RPC, "error in getResults()", e);
+            
             return Collections.emptyList();
         }
     }
@@ -540,7 +558,8 @@ public class RpcClient {
             sendRequest("<get_state/>\n");
             return CcStateParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getState()", e);
+            Logging.logException(Logging.Category.RPC, "error in getState()", e);
+            
             return null;
         }
     }
@@ -577,7 +596,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (Exception e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "RpcClient.reportDeviceStatus() error: ", e);
+            Logging.logException(Logging.Category.RPC, "RpcClient.reportDeviceStatus() error: ", e);
+            
             return false;
         }
     }
@@ -607,7 +627,7 @@ public class RpcClient {
                 return;
             mLastErrorMessage = parser.getErrorMessage();
         } catch (Exception e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "RpcClient.setHostInfo() error: ", e);
+            Logging.logException(Logging.Category.RPC, "RpcClient.setHostInfo() error: ", e);
         }
     }
 
@@ -635,7 +655,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (Exception e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "RpcClient.setDomainNameRpc() error: ", e);
+            Logging.logException(Logging.Category.RPC, "RpcClient.setDomainNameRpc() error: ", e);
+            
             return false;
         }
     }
@@ -673,8 +694,8 @@ public class RpcClient {
                     opTag = "project_reset";
                     break;
                 default:
-                    if (Logging.LOGLEVEL <= 4)
-                        Log.e(Logging.TAG, "projectOp() - unsupported operation: " + operation);
+                    Logging.logError(Logging.Category.RPC, "projectOp() - unsupported operation: " + operation);
+                    
                     return false;
             }
             String request =
@@ -689,7 +710,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in projectOp()", e);
+            Logging.logException(Logging.Category.RPC, "error in projectOp()", e);
+            
             return false;
         }
     }
@@ -726,7 +748,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in createAccount()", e);
+            Logging.logException(Logging.Category.RPC, "error in createAccount()", e);
+            
             return false;
         }
     }
@@ -744,7 +767,8 @@ public class RpcClient {
             sendRequest(mRequest.toString());
             return AccountOutParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getCreateAccountPoll()", e);
+            Logging.logException(Logging.Category.RPC, "error in getCreateAccountPoll()", e);
+            
             return null;
         }
     }
@@ -778,7 +802,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in lookupAccount()", e);
+            Logging.logException(Logging.Category.RPC, "error in lookupAccount()", e);
+            
             return false;
         }
     }
@@ -796,7 +821,8 @@ public class RpcClient {
             sendRequest(mRequest.toString());
             return AccountOutParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getLookupAccountPoll()", e);
+            Logging.logException(Logging.Category.RPC, "error in getLookupAccountPoll()", e);
+            
             return null;
         }
     }
@@ -827,7 +853,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in projectAttach()", e);
+            Logging.logException(Logging.Category.RPC, "error in projectAttach()", e);
+            
             return false;
         }
     }
@@ -845,7 +872,8 @@ public class RpcClient {
             sendRequest(mRequest.toString());
             return ProjectAttachReplyParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in projectAttachPoll()", e);
+            Logging.logException(Logging.Category.RPC, "error in projectAttachPoll()", e);
+            
             return null;
         }
     }
@@ -876,7 +904,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in acctMgrRPC()", e);
+            Logging.logException(Logging.Category.RPC, "error in acctMgrRPC()", e);
+            
             return false;
         }
     }
@@ -896,7 +925,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in acctMgrRPC()", e);
+            Logging.logException(Logging.Category.RPC, "error in acctMgrRPC()", e);
+            
             return false;
         }
     }
@@ -915,7 +945,8 @@ public class RpcClient {
             sendRequest(mRequest.toString());
             return AcctMgrRPCReplyParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in acctMgrRPCPoll()", e);
+            Logging.logException(Logging.Category.RPC, "error in acctMgrRPCPoll()", e);
+            
             return null;
         }
     }
@@ -931,7 +962,8 @@ public class RpcClient {
             sendRequest("<acct_mgr_info/>\n");
             return AcctMgrInfoParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getAcctMgrInfo()", e);
+            Logging.logException(Logging.Category.RPC, "error in getAcctMgrInfo()", e);
+            
             return null;
         }
     }
@@ -950,7 +982,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getProjectConfig()", e);
+            Logging.logException(Logging.Category.RPC, "error in getProjectConfig()", e);
+            
             return false;
         }
     }
@@ -963,7 +996,8 @@ public class RpcClient {
             sendRequest(mRequest.toString());
             return ProjectConfigReplyParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in getProjectConfigPoll()", e);
+            Logging.logException(Logging.Category.RPC, "error in getProjectConfigPoll()", e);
+            
             return null;
         }
     }
@@ -976,8 +1010,8 @@ public class RpcClient {
             sendRequest(mRequest.toString());
             return ProjectInfoParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING)
-                Log.w(Logging.TAG, "error in getAllProjectsList()", e);
+            Logging.logException(Logging.Category.RPC, "error in getAllProjectsList()", e);
+            
             return Collections.emptyList();
         }
     }
@@ -990,8 +1024,8 @@ public class RpcClient {
             sendRequest(mRequest.toString());
             return AccountManagerParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING)
-                Log.w(Logging.TAG, "error in getAccountManagersList()", e);
+            Logging.logException(Logging.Category.RPC, "error in getAccountManagersList()", e);
+            
             return Collections.emptyList();
         }
     }
@@ -1004,7 +1038,8 @@ public class RpcClient {
             sendRequest(mRequest.toString());
             return GlobalPreferencesParser.parse(receiveReply());
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in globalPrefsWorking()", e);
+            Logging.logException(Logging.Category.RPC, "error in globalPrefsWorking()", e);
+            
             return null;
         }
     }
@@ -1104,7 +1139,8 @@ public class RpcClient {
             receiveReply();
             return true;
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in setGlobalPrefsOverrideStruct()", e);
+            Logging.logException(Logging.Category.RPC, "error in setGlobalPrefsOverrideStruct()", e);
+            
             return false;
         }
     }
@@ -1119,7 +1155,8 @@ public class RpcClient {
             receiveReply();
             return true;
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in setGlobalPrefsOverrideStruct()", e);
+            Logging.logException(Logging.Category.RPC, "error in setGlobalPrefsOverrideStruct()", e);
+            
             return false;
         }
     }
@@ -1127,16 +1164,17 @@ public class RpcClient {
     /**
      * Tells the BOINC core client to exit.
      */
-    public synchronized void quit() {
+    public synchronized boolean quit() {
         try {
             sendRequest("<quit/>\n");
             SimpleReplyParser parser = SimpleReplyParser.parse(receiveReply());
             if (parser == null)
-                return;
+                return true;
             mLastErrorMessage = parser.getErrorMessage();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in quit()", e);
+            Logging.logException(Logging.Category.RPC, "error in quit()", e);
         }
+        return false;
     }
 
     /**
@@ -1161,7 +1199,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in setNetworkMode()", e);
+            Logging.logException(Logging.Category.RPC, "error in setNetworkMode()", e);
+            
             return false;
         }
     }
@@ -1188,7 +1227,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in setRunMode()", e);
+            Logging.logException(Logging.Category.RPC, "error in setRunMode()", e);
+            
             return false;
         }
     }
@@ -1212,8 +1252,8 @@ public class RpcClient {
                     opTag = "abort_file_transfer";
                     break;
                 default:
-                    if (Logging.LOGLEVEL <= 4)
-                        Log.e(Logging.TAG, "transferOp() - unsupported operation: " + operation);
+                    Logging.logException(Logging.Category.RPC, "transferOp() - unsupported operation: " + operation, null);
+                    
                     return false;
             }
             mRequest.setLength(0);
@@ -1234,7 +1274,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in transferOp()", e);
+            Logging.logException(Logging.Category.RPC, "error in transferOp()", e);
+            
             return false;
         }
     }
@@ -1260,8 +1301,8 @@ public class RpcClient {
                     opTag = "abort_result";
                     break;
                 default:
-                    if (edu.berkeley.boinc.utils.Logging.LOGLEVEL <= 4)
-                        Log.e(Logging.TAG, "resultOp() - unsupported operation: " + operation);
+                    Logging.logException(Logging.Category.RPC, "resultOp() - unsupported operation: " + operation, null);
+                    
                     return false;
             }
             mRequest.setLength(0);
@@ -1282,7 +1323,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in transferOp()", e);
+            Logging.logException(Logging.Category.RPC, "error in transferOp()", e);
+            
             return false;
         }
     }
@@ -1300,7 +1342,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in setCcConfig()", e);
+            Logging.logException(Logging.Category.RPC, "error in setCcConfig()", e);
+            
             return false;
         }
     }
@@ -1317,7 +1360,8 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in readCcConfig()", e);
+            Logging.logException(Logging.Category.RPC, "error in readCcConfig()", e);
+            
             return false;
         }
     }
@@ -1334,8 +1378,50 @@ public class RpcClient {
             mLastErrorMessage = parser.getErrorMessage();
             return parser.getResult();
         } catch (IOException e) {
-            if (Logging.WARNING) Log.w(Logging.TAG, "error in runBenchmark()", e);
+            Logging.logException(Logging.Category.RPC, "error in runBenchmark()", e);
+            
             return false;
         }
+    }
+
+    private boolean initBuffersFromSocket(boolean isLocal)
+    {
+        try {
+            socketSource = Okio.buffer(Okio.source(isLocal ? mSocket.getInputStream()  : mTcpSocket.getInputStream()));
+            socketSink   = Okio.buffer(Okio.sink(  isLocal ? mSocket.getOutputStream() : mTcpSocket.getOutputStream()));
+        } catch (IllegalArgumentException e) {
+            Logging.logException(Logging.Category.RPC, "connect failure: illegal argument", e);
+            
+            mSocket    = null;
+            mTcpSocket = null;
+            return false;
+        } catch (IOException e) {
+            Logging.logException(Logging.Category.RPC, "connect failure: IO", e);
+            
+            mSocket    = null;
+            mTcpSocket = null;
+            return false;
+        } catch (Exception e) {
+            Logging.logException(Logging.Category.RPC, "connect failure", e);
+            
+            mSocket    = null;
+            mTcpSocket = null;
+            return false;
+        }
+
+        Logging.logDebug(Logging.Category.RPC, "Connected successfully");
+        
+        return true;
+    }
+
+    private void closeOpenConnection() {
+        if (isConnected()) {
+            // Already connected
+            Logging.logError(Logging.Category.RPC, "Attempt to connect when already connected");
+            // We better close current connection and reconnect (address/port could be different)
+            close();
+        }
+        mSocket    = null;
+        mTcpSocket = null;
     }
 }

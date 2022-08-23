@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,7 +18,6 @@
  */
 package edu.berkeley.boinc.rpc
 
-import android.util.Log
 import android.util.Xml
 import edu.berkeley.boinc.utils.Logging
 import org.xml.sax.Attributes
@@ -113,10 +112,8 @@ class HostInfoParser : BaseParser() {
                     }
                 }
             }
-        } catch (e: NumberFormatException) {
-            if (Logging.ERROR) {
-                Log.e(Logging.TAG, "HostInfoParser.endElement error: ", e)
-            }
+        } catch (e: Exception) {
+            Logging.logException(Logging.Category.XML, "HostInfoParser.endElement error: ", e)
         }
         mElementStarted = false
     }
@@ -136,6 +133,9 @@ class HostInfoParser : BaseParser() {
                 Xml.parse(rpcResult, parser)
                 parser.hostInfo
             } catch (e: SAXException) {
+                Logging.logException(Logging.Category.RPC, "HostInfoParser: malformed XML ", e)
+                Logging.logDebug(Logging.Category.XML, "HostInfoParser: $rpcResult")
+
                 null
             }
         }
